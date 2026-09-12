@@ -158,7 +158,9 @@
 
   .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
 
-  /* ---------- 顶部导航 ---------- */
+  /* ---------- 顶部胶囊（第 25 轮改版）----------
+     只保留 logo + 滚动进度条：四个栏目链接与悬浮 Dock 重复，已删。
+     栏目切换/高亮/选框由 Dock 独自承担。 */
   header{position:sticky;top:0;z-index:60;padding:16px 0;pointer-events:none}
   /* 导航栏下方的整片模糊：内容从下面滚过时被磨掉，越往下越淡 */
   header::before{
@@ -172,7 +174,7 @@
     position:relative;
     pointer-events:auto;
     display:flex;align-items:center;justify-content:space-between;
-    height:58px;padding:0 10px 0 22px;
+    height:58px;padding:0 22px;
     border-radius:999px;
     background:var(--glass-bg-strong);
     -webkit-backdrop-filter:var(--glass-blur);
@@ -198,23 +200,6 @@
     transition:transform .5s var(--spring),box-shadow .5s var(--ease);
   }
   .logo:hover i{transform:scale(1.3);box-shadow:0 0 0 6px rgba(47,107,255,.12)}
-
-  .nav-links{position:relative;display:flex;align-items:center;gap:2px;font-size:14px}
-  /* 滑动指示块 */
-  .nav-ind{
-    position:absolute;left:0;top:50%;height:34px;width:0;z-index:0;
-    border-radius:999px;opacity:0;pointer-events:none;
-    background:rgba(255,255,255,.78);
-    box-shadow:inset 0 1px 0 #fff,0 5px 16px rgba(24,34,74,.10);
-    transform:translate3d(0,-50%,0);
-    transition:transform .55s var(--spring),width .55s var(--spring),opacity .3s var(--ease);
-  }
-  .nav-links a{
-    position:relative;z-index:1;
-    color:var(--ink-2);text-decoration:none;padding:8px 15px;border-radius:999px;
-    transition:color .3s var(--ease);
-  }
-  .nav-links a:hover,.nav-links a.on{color:var(--ink)}
 
   /* 滚动进度 */
   nav .progress{
@@ -547,8 +532,7 @@
     footer{padding-bottom:118px}
   }
   @media(max-width:760px){
-    .nav-links{display:none}
-    nav{padding:0 22px;justify-content:center}
+    nav{padding:0 22px}
   }
   @media(max-width:820px){
     .about{grid-template-columns:1fr;gap:22px}
@@ -615,23 +599,18 @@
   <span class="orb o5" data-parallax="0.04"></span>
 </div>
 
+<!-- 顶部胶囊：只保留 logo + 滚动进度条（第 25 轮：四个栏目链接已删，与 Dock 重复） -->
 <header id="siteHeader">
   <div class="wrap">
     <nav class="liquid">
       <a class="logo" href="#top"><i></i>Abto-467</a>
-      <div class="nav-links" id="navLinks">
-        <span class="nav-ind" id="navInd"></span>
-        <a href="#about" data-sec="about">关于</a>
-        <a href="#skills" data-sec="skills">学习</a>
-        <a href="#projects" data-sec="projects">在做</a>
-        <a href="#contact" data-sec="contact">联系</a>
-      </div>
       <div class="progress"><i id="scrollBar"></i></div>
     </nav>
   </div>
 </header>
 
-<!-- 悬浮导航 Dock：宽屏在右侧，窄屏自动变底部横条 -->
+<!-- 悬浮导航 Dock：宽屏在右侧，窄屏自动变底部横条
+     （栏目切换/高亮/选框由 Dock 独自承担） -->
 <aside class="dock liquid" id="dock" aria-label="页面导航">
   <span class="blob" id="dockBlob"></span>
   <span class="dock-tint" id="dockTint" aria-hidden="true"><span class="dock-tint-inner" id="dockTintInner"></span></span>
@@ -823,8 +802,8 @@
     alphaBg   : .40,     // 汇成 ABTO 之后的不透明度
                          // —— 它是常驻背景水印，压太低会看不见、太高会盖住正文
     hold      : 1.5,     // 打开页面后名字先完整亮相多久（秒）
-    spread    : 46,      // 碎裂时单个微粒的最大漂移(px)
-    eSpread   : .011,    // 散开的速度（用户要求"分散放慢"）—— spread01 每帧逼近 1 的比例
+    spread    : 84,      // 碎裂时单个微粒的最大漂移(px)（第 25 轮 46→84，用户要"更散"）
+    eSpread   : .022,    // 散开的速度（第 25 轮 .011→.022，用户要"运动更快"；约 3.5s 散完）
     eGather01 : .16,     // 散开量收回的速度（用户要求"汇聚大幅加快"）—— hover 时 spread01 每帧逼近 0
     eGather   : .5,      // 微粒飞回原位的缓动（越大越快）
     eDrift    : .012,    // 慢慢碎裂 / 漂浮的速度
@@ -1027,16 +1006,21 @@
           hx: ox + a.x, hy: oy + a.y,
           tx: ax + b.x, ty: ay + b.y,
           x : ox + a.x, y : oy + a.y,
-          /* 漂移落点（相对原位）与其随机抖动轴 */
+          /* 漂移落点（相对原位）与其两条独立抖动轴（第 25 轮：
+             频率/幅度/相位全部各自随机，两条轴垂直叠加 → 利萨茹式乱窜，
+             突出"无序运动"，不再是一根轴上的来回正弦） */
           rx: Math.cos(ang) * rad, ry: Math.sin(ang) * rad,
           wx: Math.cos(wob), wy: Math.sin(wob),
-          wd: 3 + Math.random() * 9,
+          wd : 8 + Math.random() * 26,
+          wd2: 8 + Math.random() * 26,
           fk: .7 + Math.random() * .6,   /* 被光标推开时的个体差异，避免推得整整齐齐 */
           /* 越靠字形上缘（越先滚出视野）越早碎开 */
           rr: .58 * ((a.y - ts.mnY) / ySpan) + .42 * Math.random(),
           pi: palMap[key],
-          ph: Math.random()*Math.PI*2,
-          fr: .16 + Math.random()*.22
+          ph : Math.random()*Math.PI*2,
+          ph2: Math.random()*Math.PI*2,
+          fr : .5 + Math.random()*.8,
+          fr2: .5 + Math.random()*.8
         });
       }
       /* 颜色量化进调色板并按颜色排序：每帧只改几十次 fillStyle，几千片也不掉帧 */
@@ -1105,11 +1089,14 @@
         var bx = hx, by = hy;
         if(spread01 > .0005){
           /* 沿自己的随机方向朝外飘（spread01 从 0 长到 1 = 慢慢散开），
-             再叠一点绕自身的小抖动，让它一直在动、不是定格。
+             再叠两条**互相垂直、频率/相位各自随机**的抖动轴：
+             轨迹是利萨茹曲线式的乱窜，突出"无序运动"（第 25 轮）。
              抖动幅度随 spread01 淡入淡出 —— 收尾那一帧才不会"啪"地停住。 */
-          var j = Math.sin(t * q.fr + q.ph) * q.wd * Math.min(1, spread01 * 14);
-          bx = hx + q.rx * spread01 + q.wx * j;
-          by = hy + q.ry * spread01 + q.wy * j;
+          var jf = Math.min(1, spread01 * 14);
+          var j1 = Math.sin(t * q.fr  + q.ph)  * q.wd  * jf;
+          var j2 = Math.sin(t * q.fr2 + q.ph2) * q.wd2 * jf;
+          bx = hx + q.rx * spread01 + q.wx * j1 - q.wy * j2;
+          by = hy + q.ry * spread01 + q.wy * j1 + q.wx * j2;
         }
         /* 靠字形上缘的微粒稍晚一点出发，汇聚时才有"陆续归队"的层次 */
         var sp = p * 1.25 - q.rr * .16;
@@ -1479,11 +1466,9 @@
     }, {passive:true});
   }
 
-  /* ---------- 9. 滚动：进度条 / 导航高亮 / 背景色相 / 玻璃加深 ---------- */
+  /* ---------- 9. 滚动：进度条 / 导航高亮 / 背景色相 ---------- */
   var header    = document.getElementById('siteHeader');
   var bar       = document.getElementById('scrollBar');
-  var navInd    = document.getElementById('navInd');
-  var navLinks  = Array.prototype.slice.call(document.querySelectorAll('#navLinks a'));
   var dock      = document.getElementById('dock');
   var blob      = document.getElementById('dockBlob');
   var tint      = document.getElementById('dockTint');
@@ -1510,12 +1495,6 @@
   });
 
   var active = '';
-  function moveIndicator(link){
-    if(!link){ navInd.style.opacity = 0; return; }
-    navInd.style.width = link.offsetWidth + 'px';
-    navInd.style.transform = 'translate3d(' + link.offsetLeft + 'px,-50%,0)';
-    navInd.style.opacity = 1;
-  }
   /* 选框 + 蓝色层一起走：蓝色层的内层反向位移，图标副本才留在原位，
      于是"窗口扫到哪儿，哪儿的图标就变蓝"。 */
   var bumpCur = 1, bumpTgt = 1;            // 只要在动就整体轻微放大（同样缓动过去）
@@ -1693,13 +1672,6 @@
   function setActive(sec){
     if(sec === active) return;
     active = sec;
-    var navHit = null;
-    navLinks.forEach(function(a){
-      var on = a.dataset.sec === sec;
-      a.classList.toggle('on', on);
-      if(on) navHit = a;
-    });
-    moveIndicator(navHit);
     dockLinks.forEach(function(a){
       var on = a.dataset.sec === sec;
       a.classList.toggle('on', on);
@@ -1741,8 +1713,6 @@
   }
   window.addEventListener('scroll', requestScroll, {passive:true});
   window.addEventListener('resize', function(){
-    var a = navLinks.filter(function(x){ return x.classList.contains('on'); })[0];
-    moveIndicator(a);
     var b = pinnedSec ? findDock(pinnedSec)
                       : dockLinks.filter(function(x){ return x.classList.contains('on'); })[0];
     moveBlob(b);
@@ -1753,7 +1723,7 @@
   });
 
   /* ---------- 10. 导航点击：平滑滚动 ---------- */
-  dockLinks.concat(navLinks).forEach(function(a){
+  dockLinks.forEach(function(a){
     a.addEventListener('click', function(e){
       var href = a.getAttribute('href');
       if(!href || href.charAt(0) !== '#') return;
