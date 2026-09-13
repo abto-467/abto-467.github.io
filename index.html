@@ -1305,21 +1305,25 @@
       el.style.backdropFilter = ref;
     }
 
-    /* 第 27 轮：不再一次性给所有面板建图（load 那一刻 11 张位移图 +
-       PNG 编码 + 标题粒子采样挤在主线程上 = 打开页面先卡一下）。
-       改成**分片排队**：每个空闲片段只处理一块面板，首屏以外越晚建越无所谓。 */
+    /* 第 27 轮：建图分片排队，避免 11 张位移图 + PNG 编码一次性挤在主线程。
+       第 30 轮改成**时间预算分片**（每帧最多干 8ms，干完让位渲染，rAF 排下一帧）：
+       旧的"每 40ms 才处理一块"让全部面板就位要半秒多，用户看到的就是
+       "折射卡一下才出来"；预算制把每帧的空闲时间全部喂给建图，
+       全部面板 2~3 帧内就位，折射看起来就像一开始就有。 */
     var queue = [], qRaf = 0;
     function pump(){
       qRaf = 0;
-      var el = queue.shift();
-      if(el) apply(el);
-      if(queue.length) qRaf = setTimeout(pump, 40);
+      var t0 = performance.now();
+      while(queue.length && performance.now() - t0 < 8){
+        apply(queue.shift());
+      }
+      if(queue.length) qRaf = requestAnimationFrame(pump);
     }
     function enqueue(els){
       for(var i = 0; i < els.length; i++){
         if(queue.indexOf(els[i]) === -1) queue.push(els[i]);
       }
-      if(!qRaf) qRaf = setTimeout(pump, 40);
+      if(!qRaf) qRaf = requestAnimationFrame(pump);
     }
     function run(){
       enqueue([].slice.call(document.querySelectorAll(GLASS_FX.sel)));
@@ -1787,21 +1791,22 @@
 
   /* ---------- 初始化 ---------- */
   if(fine){ bindLiquid(); bindButtons(); if(!reduced) bindTilt(); }
-  /* 第 27 轮：折射不再在 init 时就跑（布局未定、load 后还要全部重建 = 白做一遍），
-     统一推迟到 load 之后的空闲分片里 */
 
   measureOrbs();
   buildDockAnchors();
   requestAnimationFrame(onScroll);
+  if(glassFx){
+    /* 第 30 轮：折射别等 load+空闲才进场——那会被看成"卡一下才出效果"。
+       首帧画完（双重 rAF）就立刻开建，预算分片几帧内全部就位；
+       字体把尺寸撑变了的由 load / fonts.ready 两处重跑兜底
+       （按尺寸缓存，没变的直接命中，等于白跑不花钱）。 */
+    requestAnimationFrame(function(){ requestAnimationFrame(glassFx.run); });
+  }
   window.addEventListener('load', function(){
     measureOrbs();
     buildDockAnchors();
     if(titleFx) titleFx.build();
-    if(glassFx){
-      /* 让标题粒子先上，折射分片在空闲时排队进场（每片 40ms，无整段冻结） */
-      var idle = window.requestIdleCallback || function(f){ setTimeout(f, 220); };
-      idle(function(){ glassFx.run(); });
-    }
+    if(glassFx) glassFx.run();   /* 兜底补漏：早跑时还量不出尺寸的面板在这里补上 */
     onScroll();
   });
   /* 字体加载完尺寸还会变一次，缓存没命中的尺寸会重建（同样分片） */
