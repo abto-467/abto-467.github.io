@@ -1225,15 +1225,7 @@
     eScroll   : .3,      // 飞向字母的速度（越大越快）
     scrollSpan: .5,      // 滚过 hero 高度的这个比例后，完全变成字母
     repR      : 95,      // 光标触碰 ABTO 的作用半径(px)：只有光标附近的微粒被推开
-    repPush   : 30,      // 被触碰的微粒最多被推开多远(px)（64 太散，第 19 轮减半）
-    /* --- 辉光 / 星火（第 37 轮"标题要炫丽"）---
-       做法：另开一张 1/4 分辨率的离屏画布，把粒子以叠加(lighter)方式再画一遍，
-       放大回主画布时双线性插值本身就是柔光 —— 比给全视口画布加 filter/drop-shadow
-       便宜一个量级（那个每帧都要重算全屏模糊）。
-       ★ 想整体调亮/调暗，只改下面这两个数。 */
-    glowDark  : .95,     // 辉光强度：暗色主题（霓虹感的主力）
-    glowLight : .30,     // 辉光强度：浅色主题（浅底上给多了会糊成一层雾）
-    spark     : 260      // 星火数量：从粒子序列里等距抽一小撮，随机闪一下
+    repPush   : 30       // 被触碰的微粒最多被推开多远(px)（64 太散，第 19 轮减半）
   };
 
   var titleFx = (function(){
@@ -1249,10 +1241,6 @@
     var titleRect = null, rectT = 0, heroTop = 0, heroH = 1;
     var titleOy = 0;
     var rafId = 0, t0 = 0, spread01 = 0, ready = false, rebuildTimer = 0;
-    /* 辉光层：1/4 分辨率的离屏画布；glowMax 由当前主题决定，build 时刷新 */
-    var bloom = document.createElement('canvas'), bctx = null, gw = 0, gh = 0;
-    var glowMax = TITLE_FX.glowDark, glowNow = 1, glowWant = 1;
-    var slowN = 0, fastN = 0, lastTs = 0, sparkIdx = [];
     /* 缓动系数与散开速率的"当前值"：它们不随 hover 瞬间切换，而是逐帧缓变过去，
        否则切换那一帧微粒会猛地一窜，散开↔聚合的衔接就很生硬（第 17 轮反馈）。 */
     var curE = TITLE_FX.eDrift, curRate = TITLE_FX.eSpread;
@@ -1403,26 +1391,11 @@
       cv.height = Math.round(H*dpr);
       ctx.setTransform(dpr,0,0,dpr,0,0);
 
-      /* 辉光缓冲：固定 1/4 分辨率（与 DPR 无关）。主画布坐标系是 CSS 像素，
-         所以粒子的低分辨率坐标就是 x/4 —— 放大回来时插值自动柔化。 */
-      gw = Math.max(8, Math.round(W / 4));
-      gh = Math.max(8, Math.round(H / 4));
-      bloom.width = gw; bloom.height = gh;
-      bctx = bloom.getContext('2d');
-      /* 主题决定辉光上限：暗色才要霓虹感，浅底上只能给一点点。
-         （切主题时会走 rebuild() 重新 build，所以这里读一次就够） */
-      glowMax = document.documentElement.getAttribute('data-theme') === 'dark'
-              ? TITLE_FX.glowDark : TITLE_FX.glowLight;
-
       var ts = sampleTitle(size, family);
       var ws = sampleWord(TITLE_FX.target, size * TITLE_FX.scale, family);
       if(ts.pts.length < 60 || ws.length < 60) return false;
 
       var N = window.innerWidth < 700 ? Math.round(TITLE_FX.count/2) : TITLE_FX.count;
-      /* 星火索引：从粒子序列等距抽一小撮（序列已按颜色排序，抽出来在空间上是散的） */
-      sparkIdx = [];
-      var sparkStep = Math.max(1, Math.round(N / TITLE_FX.spark));
-      for(var sk = 0; sk < N; sk += sparkStep) sparkIdx.push(sk);
       var A = byAngle(resample(ts.pts, N));
       var B = byAngle(resample(ws, N));
 
@@ -1504,20 +1477,6 @@
       if(!t0) t0 = ts;
       var t = (ts - t0) / 1000, i, q;
 
-      /* 自适应质量：连续掉帧（>26ms）就把辉光渐隐掉，流畅优先；
-         回到 60fps（<18ms）再慢慢加回来。收的是亮度，不是整个效果。 */
-      if(lastTs){
-        var dt = ts - lastTs;
-        if(dt > 26){ slowN++; fastN = 0; }
-        else if(dt < 18){ fastN++; slowN = 0; }
-        if(slowN > 12){ glowWant = 0; slowN = 0; }
-        else if(fastN > 100){ glowWant = 1; fastN = 0; }
-      }
-      lastTs = ts;
-      glowNow += (glowWant - glowNow) * .07;
-      var glowA = glowMax * glowNow;
-      var glowOn = glowA > .03;
-
       /* 滚动进度：0 = 标题还在原位，1 = 已经完全聚成字母 */
       var y = window.pageYOffset || document.documentElement.scrollTop;
       var past = y - heroTop;
@@ -1550,15 +1509,10 @@
       var rep = p <= .5 ? 0 : Math.min(1, (p - .5) * 2);
 
       /* 越接近"已经汇成字母"，越退成一层淡的水印，免得压住下面的正文 */
-      var alphaNow = TITLE_FX.alpha + (TITLE_FX.alphaBg - TITLE_FX.alpha) * p;
-      ctx.globalAlpha = alphaNow;
+      ctx.globalAlpha = TITLE_FX.alpha + (TITLE_FX.alphaBg - TITLE_FX.alpha) * p;
       ctx.clearRect(0,0,W,H);
-      if(glowOn){
-        bctx.clearRect(0,0,gw,gh);
-        bctx.globalCompositeOperation = 'lighter';   // 粒子在辉光层里叠加 → 越密越亮
-      }
 
-      var lastPi = -1, lastPiB = -1, far = 0;
+      var lastPi = -1, far = 0;
       for(i=0;i<parts.length;i++){
         q = parts[i];
         var hx = q.hx, hy = q.hy + homeDy;
@@ -1598,56 +1552,8 @@
         q.y += (gy - q.y) * e;
         var d = Math.abs(gx - q.x) + Math.abs(gy - q.y);
         if(d > far) far = d;
-        if(q.pi !== lastPi){
-          ctx.fillStyle = pal[q.pi];
-          lastPi = q.pi;
-        }
+        if(q.pi !== lastPi){ ctx.fillStyle = pal[q.pi]; lastPi = q.pi; }
         ctx.fillRect(q.x - 1, q.y - 1, TITLE_FX.dot, TITLE_FX.dot);
-        /* 辉光层隔一颗粒子画一颗 —— 它只有 1/4 分辨率、放大回来本来就被插值糊掉，
-           密度减半在视觉上看不出来，绘制开销却省一半（否则整帧绘制量翻倍，
-           掉到 38fps 以下会被自适应质量把辉光整个关掉，等于白做）。
-           1.8px 的方点在 4 倍放大后约等于 7px 柔光。 */
-        if(glowOn && (i & 1) === 0){
-          if(q.pi !== lastPiB){ bctx.fillStyle = pal[q.pi]; lastPiB = q.pi; }
-          bctx.fillRect(q.x * .25 - .9, q.y * .25 - .9, 1.8, 1.8);
-        }
-      }
-
-      /* ---------- 辉光 / 星火 / 光扫过 ---------- */
-      if(glowOn){
-        /* 星火：抽出来的那一小撮随机闪一下，给标题加"通电"的碎光 */
-        ctx.fillStyle = '#fff';
-        for(i = 0; i < sparkIdx.length; i++){
-          q = parts[sparkIdx[i]];
-          var tw = Math.sin(t * q.fr * .8 + q.ph * 3.3);
-          if(tw > .55){
-            ctx.globalAlpha = alphaNow * ((tw - .55) / .45) * .85;
-            ctx.fillRect(q.x - 1.3, q.y - 1.3, 2.6, 2.6);
-          }
-        }
-        ctx.globalAlpha = alphaNow;
-
-        /* 光扫过：一道斜向亮带缓缓掠过。乘在辉光层上（source-atop）——
-           只在"有粒子的地方"加亮，空白处不会被扫出一条光带。 */
-        var sx = (((t * .13) % 1.4) - .2) * gw;
-        var sw = Math.max(6, gw * .16);
-        var sg = bctx.createLinearGradient(sx - sw, 0, sx + sw, gh * .5);
-        sg.addColorStop(0, 'rgba(255,255,255,0)');
-        sg.addColorStop(.5, 'rgba(255,255,255,.92)');
-        sg.addColorStop(1, 'rgba(255,255,255,0)');
-        bctx.globalCompositeOperation = 'source-atop';
-        bctx.fillStyle = sg;
-        bctx.fillRect(0, 0, gw, gh);
-        bctx.globalCompositeOperation = 'lighter';
-        bctx.fillStyle = '#fff';
-
-        /* 把辉光整体叠回主画布：放大时的双线性插值就是柔光本身。
-           ★ 强度系数 .6 是"光晕压不住清晰笔画"的平衡点，想更炸就往上加。 */
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = alphaNow * glowA * .6;
-        ctx.drawImage(bloom, 0, 0, gw, gh, 0, 0, W, H);
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = alphaNow;
       }
       /* 已经完全汇成 ABTO、而且不再动 —— 停帧省电。
          滚一下或把光标移回来，都会通过 loop() 把它重新唤起。 */
