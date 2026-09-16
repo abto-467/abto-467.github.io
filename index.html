@@ -144,9 +144,11 @@
   [data-theme="dark"] .hero::before{
     background:radial-gradient(closest-side,rgba(90,140,255,.24),rgba(0,184,169,.10) 55%,rgba(90,140,255,0) 78%);
   }
-  [data-theme="dark"] .hero h1{color:#9fb8ff}
+  [data-theme="dark"] .hero h1{color:#b3a1ff}
+  /* 暗色主题的标题走"紫罗兰 → 品红"，和浅色那套蓝→青区分开（用户点名）；
+     只换标题/水印，全站强调色仍是蓝，不动。 */
   [data-theme="dark"] .hero h1 .mark{
-    background:linear-gradient(120deg,#7ba6ff 0%,#9bb2ff 40%,#35dfcd 100%);
+    background:linear-gradient(120deg,#8574ff 0%,#a892ff 40%,#e07bd0 100%);
     background-size:220% 100%;
   }
   /* 主按钮在深底上反过来：亮底 + 深字，才是"最重"的那一颗 */
@@ -1261,17 +1263,17 @@
       c.width = cw; c.height = chh;
       var g = c.getContext('2d');
       g.font = font; g.textAlign = 'left'; g.textBaseline = 'middle';
-      /* 整行一条蓝 → 青的渐变，不再用黑色：
+      /* 整行一条渐变（浅色：蓝 → 青；深色：紫罗兰 → 品红），不再用黑色：
          滚动之后这行字会变成常驻的 ABTO 背景水印，黑的重色会压住正文。
-         深色主题下整条提亮一档，否则碎片在暗底上糊成一团看不清。 */
+         两套色都要在各自底色上够亮，暗底上尤其不能发闷。 */
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       var gr = g.createLinearGradient(pad, 0, pad + w1 + w2, 0);
       if(dark){
-        gr.addColorStop(0,   '#8cb0ff');
-        gr.addColorStop(.34, '#a6bbff');
-        gr.addColorStop(.58, '#6f9bff');
-        gr.addColorStop(.82, '#84ccff');
-        gr.addColorStop(1,   '#35dfcd');
+        gr.addColorStop(0,   '#8574ff');
+        gr.addColorStop(.34, '#a892ff');
+        gr.addColorStop(.58, '#9b7bff');
+        gr.addColorStop(.82, '#c58bf0');
+        gr.addColorStop(1,   '#e07bd0');
       }else{
         gr.addColorStop(0,   '#3f6ae0');
         gr.addColorStop(.34, '#7b8cf2');
@@ -1296,7 +1298,8 @@
       c.width = cw; c.height = chh;
       var g = c.getContext('2d');
       g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#6f9bff' : '#2f6bff';
+      /* 汇成 ABTO 的那层色：跟标题同一色系（浅色蓝、深色紫罗兰） */
+      g.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#9d86ff' : '#2f6bff';
       g.fillText(text, cw/2, chh/2);
       return recenter(inkPoints(c)).pts;
     }
