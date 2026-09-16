@@ -1159,12 +1159,11 @@
     }
     function paint(t){
       apply(t);
-      /* 标题碎片是按"当时的主题色"采样的，换主题要重采一次。
-         但不能在这里当场重建 —— 那 15000 个点的采样会把圆扩散动画的开场拖住；
-         压在动画快结束时再重建（rebuild 自己还有 260ms 去抖）。 */
-      setTimeout(function(){
-        if(typeof titleFx !== 'undefined' && titleFx) titleFx.rebuild();
-      }, 380);
+      /* 标题碎片的颜色按主题取（浅色蓝→青 / 深色紫罗兰→品红）。
+         第 38 轮起只换调色板、不重建几何 —— 重建要重采样 15000 个点，
+         既拖慢开场，又会在"微粒正散开时"把整团云弹回字形。
+         现在这一步是几十个颜色的纯算术，同步做完即可，颜色和背景同一帧切。 */
+      if(typeof titleFx !== 'undefined' && titleFx) titleFx.retheme();
     }
     function toggle(x, y){
       var t = get() === 'dark' ? 'light' : 'dark';
@@ -1225,7 +1224,10 @@
     eScroll   : .3,      // 飞向字母的速度（越大越快）
     scrollSpan: .5,      // 滚过 hero 高度的这个比例后，完全变成字母
     repR      : 95,      // 光标触碰 ABTO 的作用半径(px)：只有光标附近的微粒被推开
-    repPush   : 30       // 被触碰的微粒最多被推开多远(px)（64 太散，第 19 轮减半）
+    repPush   : 30,      // 被触碰的微粒最多被推开多远(px)（64 太散，第 19 轮减半）
+    palN      : 48       // 调色板档数：把标题渐变沿 x 均分 48 段取色。
+                         // 微粒颜色按"它在标题上离左端的比例"取（解析法，见 titlePalette），
+                         // 所以换主题只要换这 48 个颜色 —— 几何一个字节都不动（第 38 轮）
   };
 
   var titleFx = (function(){
@@ -1247,19 +1249,20 @@
 
     function now(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
 
-    /* --- 把离屏画布上"有墨"的像素采成点 --- */
+    /* --- 把离屏画布上"有墨"的像素采成点 ---
+       只取坐标，不再逐点拼颜色字符串：颜色改由"点在渐变上的位置"解析算出
+       （见 titlePalette），省掉上万个字符串拼接（第 38 轮）。 */
     function inkPoints(c){
       var g = c.getContext('2d'), w = c.width, h = c.height;
       var d = g.getImageData(0,0,w,h).data, out = [];
       for(var y=0;y<h;y++){
         for(var x=0;x<w;x++){
-          var i = (y*w+x)*4;
-          if(d[i+3] > 138) out.push({x:x, y:y, c:'rgb('+d[i]+','+d[i+1]+','+d[i+2]+')'});
+          if(d[(y*w+x)*4+3] > 138) out.push({x:x, y:y});
         }
       }
       return out;
     }
-    /* 让墨迹包围盒的中心落在原点，并回报 y 方向的范围 */
+    /* 让墨迹包围盒的中心落在原点，并回报 y 方向的范围（cx 留给梯度范围换算用） */
     function recenter(pts){
       var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,i,p;
       for(i=0;i<pts.length;i++){
@@ -1269,7 +1272,7 @@
       }
       var cx=(x0+x1)/2, cy=(y0+y1)/2;
       for(i=0;i<pts.length;i++){ pts[i].x-=cx; pts[i].y-=cy; }
-      return {pts:pts, mnY:y0-cy, mxY:y1-cy};
+      return {pts:pts, mnY:y0-cy, mxY:y1-cy, cx:cx, cy:cy};
     }
     /* 采样成恰好 n 个点 */
     function resample(pts, n){
@@ -1286,12 +1289,12 @@
         for(i=0;i<n;i++){
           s = pts[idx[i]];
           /* 再抖半个碎片宽度，免得微粒正好落在像素格上 */
-          out.push({x:s.x+(Math.random()-.5)*1.2, y:s.y+(Math.random()-.5)*1.2, c:s.c});
+          out.push({x:s.x+(Math.random()-.5)*1.2, y:s.y+(Math.random()-.5)*1.2});
         }
       }else{
         for(i=0;i<n;i++){
           p = pts[Math.floor(i * pts.length / n)];
-          out.push({x:p.x+(Math.random()-.5)*1.6, y:p.y+(Math.random()-.5)*1.6, c:p.c});
+          out.push({x:p.x+(Math.random()-.5)*1.6, y:p.y+(Math.random()-.5)*1.6});
         }
       }
       return out;
@@ -1310,6 +1313,37 @@
       }
       t.sort(function(u,v){ return (u.a - v.a) || (u.r - v.r); });
       return t.map(function(o){ return o.p; });
+    }
+
+    /* --- 标题渐变的色标：采样画布与调色板共用这一份，两边永远不会走样 ---
+       浅色 = 蓝 → 青（不许动，第 35 轮定稿）；深色 = 紫罗兰 → 品红。 */
+    function titleStops(dark){
+      return dark
+        ? [[0,'#8574ff'],[.34,'#a892ff'],[.58,'#9b7bff'],[.82,'#c58bf0'],[1,'#ff6bd6']]
+        : [[0,'#3f6ae0'],[.34,'#7b8cf2'],[.58,'#2f6bff'],[.82,'#5aa8ff'],[1,'#00b8a9']];
+    }
+    function hex2rgb(h){
+      return [parseInt(h.substr(1,2),16), parseInt(h.substr(3,2),16), parseInt(h.substr(5,2),16)];
+    }
+    /* 在色标上取 t∈[0,1] 处的颜色：分段线性。canvas 的线性渐变默认就在 sRGB 里
+       做分量线性插值，所以这里算出来的和画布渲染出来的**逐位一致**。 */
+    function stopsAt(st, t){
+      var i = 1;
+      while(i < st.length - 1 && t > st[i][0]) i++;
+      var a = st[i-1], b = st[i];
+      var k = (t - a[0]) / Math.max(1e-6, b[0] - a[0]);
+      if(k < 0) k = 0; else if(k > 1) k = 1;
+      var ca = hex2rgb(a[1]), cb = hex2rgb(b[1]);
+      return 'rgb(' + Math.round(ca[0] + (cb[0]-ca[0]) * k) + ',' +
+                      Math.round(ca[1] + (cb[1]-ca[1]) * k) + ',' +
+                      Math.round(ca[2] + (cb[2]-ca[2]) * k) + ')';
+    }
+    /* 整套调色板 = 沿渐变均分 palN 段。纯算术，不碰画布 —— 换主题时用它
+       即时重取色，省掉"重采样 15000 个点"那一大笔（第 38 轮）。 */
+    function titlePalette(dark){
+      var st = titleStops(dark), N = TITLE_FX.palN, out = [];
+      for(var k = 0; k < N; k++) out.push(stopsAt(st, (k + .5) / N));
+      return out;
     }
 
     /* --- 标题渲染成离屏画布：前段墨色 + 姓名渐变，再采样 --- */
@@ -1339,24 +1373,19 @@
          滚动之后这行字会变成常驻的 ABTO 背景水印，黑的重色会压住正文。
          两套色都要在各自底色上够亮，暗底上尤其不能发闷。 */
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-      var gr = g.createLinearGradient(pad, 0, pad + w1 + w2, 0);
-      if(dark){
-        gr.addColorStop(0,   '#8574ff');
-        gr.addColorStop(.34, '#a892ff');
-        gr.addColorStop(.58, '#9b7bff');
-        gr.addColorStop(.82, '#c58bf0');
-        gr.addColorStop(1,   '#ff6bd6');
-      }else{
-        gr.addColorStop(0,   '#3f6ae0');
-        gr.addColorStop(.34, '#7b8cf2');
-        gr.addColorStop(.58, '#2f6bff');
-        gr.addColorStop(.82, '#5aa8ff');
-        gr.addColorStop(1,   '#00b8a9');
-      }
+      var gx0 = pad, gx1 = pad + w1 + w2;
+      var gr = g.createLinearGradient(gx0, 0, gx1, 0);
+      var st = titleStops(dark);
+      for(var si = 0; si < st.length; si++) gr.addColorStop(st[si][0], st[si][1]);
       g.fillStyle = gr;
       if(pre)  g.fillText(pre,  pad, chh/2);
       if(mark) g.fillText(mark, pad+w1, chh/2);
-      return recenter(inkPoints(c));
+      /* 连同渐变的 x 范围一起交出去（换算到 recenter 之后的坐标系）：
+         调色板要按"点在渐变上的比例"取色，就得知道渐变从哪儿到哪儿。 */
+      var rec = recenter(inkPoints(c));
+      rec.gx0 = gx0 - rec.cx;
+      rec.gx1 = gx1 - rec.cx;
+      return rec;
     }
 
     /* --- 采样目标字母 --- */
@@ -1417,14 +1446,21 @@
       heroTop = hb.top + (window.pageYOffset || document.documentElement.scrollTop);
       heroH   = hb.height;
 
-      var palMap = {}, ySpan = Math.max(1, ts.mxY - ts.mnY);
-      pal = []; parts = [];
+      /* 调色板改成"沿渐变均分 palN 段"（解析法，不碰像素）——
+         于是微粒的颜色只由它在标题上的位置决定，换主题只要换这几十个颜色，
+         几何完全不用重建（第 38 轮：修"散开时切主题会一坨弹回字形"）。 */
+      pal = titlePalette(document.documentElement.getAttribute('data-theme') === 'dark');
+      var palN = TITLE_FX.palN;
+      var gSpan = Math.max(1e-6, ts.gx1 - ts.gx0);
+      var ySpan = Math.max(1, ts.mxY - ts.mnY);
+      parts = [];
       for(var i=0;i<N;i++){
         var a = A[i], b = B[i];
-        var m2 = /rgb\((\d+),(\d+),(\d+)\)/.exec(a.c) || [0,'21','24','31'];
-        var rr = +m2[1], gg = +m2[2], bb = +m2[3];
-        var key = (rr>>4)*256 + (gg>>4)*16 + (bb>>4);
-        if(palMap[key] === undefined){ palMap[key] = pal.length; pal.push('rgb('+rr+','+gg+','+bb+')'); }
+        /* u = 这颗粒子在标题渐变上的位置(0 左端 ~ 1 右端) → 直接就是调色板下标 */
+        var u = (a.x - ts.gx0) / gSpan;
+        if(u < 0) u = 0; else if(u > 1) u = 1;
+        var pidx = Math.floor(u * palN);
+        if(pidx > palN - 1) pidx = palN - 1;
         /* 碎裂方向：角度取 0~2π 的均匀随机、半径也是随机 —— 每个微粒朝自己的方向飘，
            所以看不出"整片往一个方向跑"。抖动轴再独立随机一次，避免出现规整的放射状。 */
         var ang = Math.random() * Math.PI * 2;
@@ -1444,7 +1480,7 @@
           fk: .7 + Math.random() * .6,   /* 被光标推开时的个体差异，避免推得整整齐齐 */
           /* 越靠字形上缘（越先滚出视野）越早碎开 */
           rr: .58 * ((a.y - ts.mnY) / ySpan) + .42 * Math.random(),
-          pi: palMap[key],
+          pi: pidx,
           ph : Math.random()*Math.PI*2,
           ph2: Math.random()*Math.PI*2,
           /* 第 26 轮：频率提到 2.2~5.8 rad/s（周期约 1~3 秒）——
@@ -1584,6 +1620,17 @@
         if(!ready) return;
         clearTimeout(rebuildTimer);
         rebuildTimer = setTimeout(function(){ build(); }, 260);
+      },
+      /* 换主题时**只换颜色**，几何一个字节都不动（第 38 轮）。
+         以前这里是"延迟 380ms 后整份重建"，问题有两个：
+         1) 重建会把每颗粒子的 x/y 复位到"标题原位"—— 如果此刻微粒正散开着，
+            整团云会当场地弹回字形，再慢慢散开，看着就是"啪"地一下；
+         2) 重建比圆扩散动画晚 640ms 才发生，切完主题后颜色还会突变一次。
+         现在调色板是解析出的几十个颜色，重取色就是毫秒级：立即生效、零位移。 */
+      retheme: function(){
+        if(!ready) return;
+        pal = titlePalette(document.documentElement.getAttribute('data-theme') === 'dark');
+        loop();   /* 已静止时帧循环是停的，叫醒它重画一帧 */
       },
       /* onScroll 会调它 —— 顺带把停掉的帧重新唤起。
          第 26 轮：不再每次滚动都强制 getBoundingClientRect（和 glassDeform 的
