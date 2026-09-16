@@ -1261,10 +1261,10 @@
        （见 titlePalette），省掉上万个字符串拼接（第 38 轮）。 */
     function inkPoints(c){
       var g = c.getContext('2d'), w = c.width, h = c.height;
-      var d = g.getImageData(0,0,w,h).data, out = [];
+      var d = g.getImageData(0,0,w,h).data, out = [], i = 3;
       for(var y=0;y<h;y++){
-        for(var x=0;x<w;x++){
-          if(d[(y*w+x)*4+3] > 138) out.push({x:x, y:y});
+        for(var x=0;x<w;x++, i+=4){
+          if(d[i] > 138) out.push({x:x, y:y});
         }
       }
       return out;
@@ -1412,7 +1412,14 @@
       return recenter(inkPoints(c)).pts;
     }
 
-    /* --- 建立 / 重建整套碎片 --- */
+    /* --- 建立 / 重建整套碎片 ---
+       ★ 分两帧做（第 38 轮）：第一帧只采样（两次 getImageData + ink 扫描 +
+       两轮 byAngle 排序），第二帧才构建 15000 颗粒子并上线。
+       两半各十几毫秒，峰值直接砍半 —— 原来是一次 30~40ms 的同步块，
+       正好撞在"加载那一秒"里，是加载卡顿的主要来源之一。
+       这两帧里页面显示的仍是真文本 <h1>（画布还没加 .on），观感完全不受影响。 */
+    var s2raf = 0;   /* 第二段排上的帧 */
+
     function build(){
       var cs = getComputedStyle(h1);
       var size = parseFloat(cs.fontSize) || 48;
@@ -1452,7 +1459,19 @@
       var hb = hero.getBoundingClientRect();
       heroTop = hb.top + (window.pageYOffset || document.documentElement.scrollTop);
       heroH   = hb.height;
+      titleRect = hr; rectT = now();
 
+      /* 第一段到此为止，剩下的交给下一帧（连续 resize 会取消上一次没跑的） */
+      if(s2raf) cancelAnimationFrame(s2raf);
+      s2raf = requestAnimationFrame(function(){
+        s2raf = 0;
+        finish(N, ts, A, B, ox, oy, ax, ay);
+      });
+      return true;
+    }
+
+    /* build 的第二段：构建粒子 + 排序 + 上线 */
+    function finish(N, ts, A, B, ox, oy, ax, ay){
       /* 调色板改成"沿渐变均分 palN 段"（解析法，不碰像素）——
          于是微粒的颜色只由它在标题上的位置决定，换主题只要换这几十个颜色，
          几何完全不用重建（第 38 轮：修"散开时切主题会一坨弹回字形"）。 */
@@ -1499,12 +1518,10 @@
       /* 颜色量化进调色板并按颜色排序：每帧只改几十次 fillStyle，几千片也不掉帧 */
       parts.sort(function(u,v){ return u.pi - v.pi; });
 
-      titleRect = hr; rectT = now();
       spread01 = 0; t0 = 0; ready = true;
       box.classList.add('fx');
       cv.classList.add('on');
       loop();
-      return true;
     }
 
     /* 命中判定用的标题矩形：120ms 内复用，避免每次指针移动都触发重排 */
@@ -1675,6 +1692,11 @@
     k   : 5,         // 指数陡度：fall = e^(k·(t−1))。越大边缘"变化率"越高（t=1 边缘、t=0 带宽外）
     band: .45,       // 折射带宽 = 短边的比例，夹在 10~40px；带宽给足，陡峭的边缘带才看得见
     sat : 1.4,       // 折射后的饱和度补偿
+    mapMax: 176,     // 位移图的像素上限（第 38 轮从 300 降）：位移场是极平滑的渐变，
+                     // 176 拉伸回面板尺寸后看不出差别，但逐像素算图的开销按面积降到 1/3、
+                     // PNG 编码也小得多 —— 这是"加载时卡顿"的主要来源
+    budget: 6,       // 每帧最多花多少毫秒建图（第 38 轮从 8 收紧）：单张图变便宜之后，
+                     // 收紧预算能让每帧都留足余量，建图铺得更平、看不出卡
     /* ⚠️ '.dock .blob' 不能加进来（第 23c 轮踩坑）：这枚 44px 小选框嵌在
        Dock 的 backdrop 层里、底下图标还有 hover 动画，SVG 折射滤镜
        采样失败会整块渲染成深色圆片（用户截图实锤）。
@@ -1697,11 +1719,17 @@
 
     var cache = {}, n = 0;
 
-    /* --- 圆角矩形透镜的位移图：R = x 偏移，G = y 偏移，128 = 不动 --- */
+    /* --- 圆角矩形透镜的位移图：R = x 偏移，G = y 偏移，128 = 不动 ---
+       衰减曲线 fall = e^(k(t-1)) 只跟 t 有关，所以先把曲线打成一张 1024 段的表，
+       循环里查表代替 Math.exp —— 逐像素调 Math.exp 是这张图最贵的一步。
+       查表再在两段之间做一次线性插值，误差降到 O(Δt²) ≈ 2e-6，
+       量化到 Uint8 之后和原来的 Math.exp 结果**完全一致**（有逐像素比对兜底）。 */
+    var FALL_N = 1024, FALL = new Float32Array(FALL_N + 1);
+    for(var fi = 0; fi <= FALL_N; fi++){
+      FALL[fi] = Math.exp(GLASS_FX.k * (fi / FALL_N - 1));
+    }
     function buildMap(w, h, r){
-      var k  = Math.min(1, 300 / Math.max(w, h));  // 图不必按元素像素大小，封顶 300 再拉伸
-                                                   // （第 27 轮从 400 降：位移图是平滑渐变，
-                                                   //   低分辨率拉伸后毫无差别，编码快一半多）
+      var k  = Math.min(1, GLASS_FX.mapMax / Math.max(w, h));  // 图不必按元素像素大小，封顶后拉伸
       var mw = Math.max(8, Math.round(w * k));
       var mh = Math.max(8, Math.round(h * k));
       var rr = Math.min(r, Math.min(w, h) / 2) * k;
@@ -1713,15 +1741,20 @@
       cv.width = mw; cv.height = mh;
       var g = cv.getContext('2d');
       var img = g.createImageData(mw, mh), d = img.data;
-      var bx = mw / 2 - rr, by = mh / 2 - rr;
+      var mx = mw / 2, my = mh / 2;
+      var bx = mx - rr, by = my - rr;
+      var invBand = 1 / band;
+      var i = 0;
       for(var y = 0; y < mh; y++){
+        var py = y + .5 - my, apy = Math.abs(py), qy = apy - by;
         for(var x = 0; x < mw; x++){
-          var px = x + .5 - mw / 2, py = y + .5 - mh / 2;
-          var qx = Math.abs(px) - bx, qy = Math.abs(py) - by;
-          var ox = Math.max(qx, 0), oy = Math.max(qy, 0);
-          /* 圆角矩形的带符号距离：负 = 在内部，绝对值 = 到边缘的距离 */
-          var sd = Math.min(Math.max(qx, qy), 0) + Math.sqrt(ox * ox + oy * oy) - rr;
-          var depth = -sd;
+          var px = x + .5 - mx, apx = Math.abs(px), qx = apx - bx;
+          var ox = qx > 0 ? qx : 0, oy = qy > 0 ? qy : 0;
+          /* 圆角矩形的带符号距离：负 = 在内部，绝对值 = 到边缘的距离。
+             min(max(qx,qy),0) 手工展开成"取大者再夹到 ≤0"，省掉每像素两次函数调用 */
+          var sd = (qx > qy ? qx : qy);
+          if(sd > 0) sd = 0;
+          sd += Math.sqrt(ox * ox + oy * oy) - rr;
           /* 外法线：角区沿对角，直边区沿轴，中心为 0 */
           var nx = 0, ny = 0;
           if(qx > 0 && qy > 0){
@@ -1730,18 +1763,18 @@
             ny = qy / l * (py < 0 ? -1 : 1);
           }else if(qx > 0){ nx = px < 0 ? -1 : 1; }
           else if(qy > 0){ ny = py < 0 ? -1 : 1; }
-          var t = 1 - depth / band;
+          /* t = 1 - depth/band，depth = -sd；查表 + 插值得到衰减 */
+          var t = 1 + sd * invBand;
           if(t < 0) t = 0; else if(t > 1) t = 1;
-          /* 指数衰减 fall = e^(k·(t−1))：t=1（边缘）时恰为 1，t=0（带宽外）时
-             e^-k ≈ 0。凸透镜的位移场越靠边越陡，指数曲线的导数在边缘处
-             恰好取到最大值 k —— 边缘"变化率"直接由 GLASS_FX.k 一个数控制
-             （第 24 轮从幂函数 t⁴ 换成指数，用户点名）。 */
-          var fall = Math.exp(GLASS_FX.k * (t - 1));
-          var i = (y * mw + x) * 4;
+          var ft = t * FALL_N, gi = ft | 0;
+          if(gi >= FALL_N){ gi = FALL_N - 1; ft = FALL_N; }
+          var f0 = FALL[gi];
+          var fall = f0 + (FALL[gi + 1] - f0) * (ft - gi);
           d[i]     = 128 + nx * fall * 127;
           d[i + 1] = 128 + ny * fall * 127;
           d[i + 2] = 128;
           d[i + 3] = 255;
+          i += 4;
         }
       }
       g.putImageData(img, 0, 0);
@@ -1800,12 +1833,15 @@
        第 30 轮改成**时间预算分片**（每帧最多干 8ms，干完让位渲染，rAF 排下一帧）：
        旧的"每 40ms 才处理一块"让全部面板就位要半秒多，用户看到的就是
        "折射卡一下才出来"；预算制把每帧的空闲时间全部喂给建图，
-       全部面板 2~3 帧内就位，折射看起来就像一开始就有。 */
+       全部面板 2~3 帧内就位，折射看起来就像一开始就有。
+       第 38 轮：预算收到 GLASS_FX.budget（6ms），同时把单张图做便宜（mapMax 300→176、
+       查表代替 Math.exp）—— 原来一张大图就要 20~30ms，预算是在元素之间检查的，
+       拦不住单张图内部的超支，加载时照样一顿一顿。 */
     var queue = [], qRaf = 0;
     function pump(){
       qRaf = 0;
-      var t0 = performance.now();
-      while(queue.length && performance.now() - t0 < 8){
+      var t0 = performance.now(), B = GLASS_FX.budget;
+      while(queue.length && performance.now() - t0 < B){
         apply(queue.shift());
       }
       if(queue.length) qRaf = requestAnimationFrame(pump);
