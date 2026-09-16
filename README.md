@@ -407,6 +407,32 @@ translate3d(x,y,0) scale(defCur.x × bumpCur, defCur.y × bumpCur)
 
 **调参入口**：`GLASS_FX.mapMax`（嫌边缘不够锐利就往上加）/ `GLASS_FX.budget` / `TITLE_FX.slowMove`。
 
+## 第 40 轮：光标光效的延迟
+
+**症状**：光标划过玻璃面板时，那团柔光拖在光标后面。
+
+**原因**：`.liquid`（光斑）和 `.tilt`（3D 倾斜）原本**各挂了一个 `pointermove` 监听**，而且每次事件里都做两件贵的事 ——
+
+1. `getBoundingClientRect()`：**强制同步布局**；
+2. `style.setProperty('--mx', …)`：**当场作废样式**。
+
+高回报率鼠标的 `pointermove` 频率能到 **1000Hz**。也就是说每秒要跑上千次"布局 → 作废"循环，还要乘上元素数量（同一块面板被两个监听器各算一遍）。主线程被这些无用功塞满，绘制只能排队，光斑自然跟不上光标。
+
+**改法**：合并成一个处理器 `bindPointerFx()`（原来的 `bindLiquid` / `bindTilt` 已删除）。事件里**只记最新坐标**，用 `requestAnimationFrame` 合并成「每帧量一次 rect、写一次变量」：
+
+```js
+el.addEventListener('pointermove', function(e){
+  cx = e.clientX; cy = e.clientY;              // 只记坐标，不碰布局
+  if(!raf) raf = requestAnimationFrame(flush); // 一帧只排一次
+}, {passive:true});
+```
+
+一帧最多一次布局、最多 4 次变量写入。而且 `flush` 跑在 rAF 里、写的是**这一帧最新**的坐标，所以延迟比原来更低，不是牺牲响应性换性能。
+
+> 光斑仍然是 CSS 里的 `radial-gradient(… at var(--mx) var(--my) …)`，即"重绘"而非合成。曾考虑改成固定尺寸圆 + `translate3d`（走合成器），但那样**必须剪切**，否则光斑会溢出面板边界，得给 `.liquid` 加上 `overflow:hidden` 而波及约 40 个元素 —— 风险大于收益，所以没做。
+
+**注意**：如果你感觉的是「光要过一会儿才浮现」，那是另一回事 —— 那是 `.liquid::after` 的 `transition:opacity .45s` 淡入，把那行改小即可。
+
 ## 用命令行部署（进阶）
 
 ```bash
