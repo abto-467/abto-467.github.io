@@ -316,7 +316,13 @@ translate3d(x,y,0) scale(defCur.x × bumpCur, defCur.y × bumpCur)
 - HTML 上挂 `data-theme="light|dark"`。**首帧前**就在 `<head>` 的内联脚本里定好（读 `localStorage.abto-theme`），否则会先闪一帧浅色。默认浅色，**不跟随系统**（避免"自己看着浅色、别人打开是深色"的困惑）。
 - 入口两处：顶栏胶囊右侧的太阳/月亮按钮（图标表示"点了会变成什么"）、`⌘K` 面板里的「切换主题」。
 - 切换用 **View Transitions** 从按钮位置做圆形扩散（`::view-transition-new(root)` + `clip-path: circle()`）；不支持的浏览器 / 开了"减少动态效果"直接瞬时切换，不做 polyfill。
-- 深色下标题碎片的采样色要换一套（`sampleTitle` 里的渐变 / `sampleWord` 的填充色按主题分支），切主题后延迟 720ms 重建粒子 —— 当场重建会让 15000 点的采样卡在圆扩散动画中间。
+- 深色下标题碎片的采样色要换一套（`sampleTitle` 里的渐变 / `sampleWord` 的填充色按主题分支），切主题后延迟 380ms 重建粒子 —— 当场重建会拖住圆扩散动画的开场。
+- **跟随主题一起适配的东西**（缺一个就会出现"某处还是浅色配方"的割裂感）：
+  - **指针光感**：光斑中心/中段/外圈三个颜色（`--gc-core/mid/edge`）在深色下换成冷蓝，强度再乘一个全局系数 `--ga-k`（深色 `.62`）—— 同一团白光照在深底上会变成过曝的白斑。各组件自己的 `--ga` 不用重写。
+  - **投影**：浅色那套是蓝灰投影（`rgba(38,66,150,…)`），深色下一律换成更重的黑投影（nav / header.scrolled / dock / blob / ghost 按钮 / chip / project:hover / social:hover 各有一条）。
+  - **背景色块 `.orb`**：浅色版那几块高明度色块铺在黑底上会浮出一层脏灰，深色下换成"更深的同色系 + 略高透明度"。
+  - 其它写死颜色的地方：`header.scrolled nav` 的白底、主按钮反色（亮底深字）、chip 白膜、Dock tooltip、页脚分隔线、`@supports not backdrop-filter` 回落、主按钮的涟漪（亮底上白涟漪看不见 → 换深涟漪）。
+  - `color-scheme:dark` 让原生滚动条也跟着变暗。
 
 **2. `⌘K` 命令面板（`Ctrl/⌘ + K`）**
 - 8 个条目：五个栏目 + 切换主题、复制邮箱、打开 GitHub。匹配分三档：标题开头命中 > 标题内命中 > 其它字段命中，都命中不了再退到"顺序字母"（`hel` → Hello）兜底。

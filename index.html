@@ -108,6 +108,15 @@
 
     --film:rgba(255,255,255,.08);
     --film-2:rgba(91,140,255,.16);
+
+    /* 指针光感在深色下：颜色偏冷 + 强度整体压到 62%
+       （同一团白光在深底上会变成过曝的白斑，还会把玻璃底洗灰） */
+    --ga-k:.62;
+  }
+  [data-theme="dark"] .liquid{
+    --gc-core:206,224,255;
+    --gc-mid:176,203,255;
+    --gc-edge:148,188,255;
   }
 
   /* 深色下逐条修掉写死颜色的地方（浅色配方不能直接复用） */
@@ -120,11 +129,14 @@
   [data-theme="dark"] .bg-rip{
     background:radial-gradient(closest-side,rgba(140,180,255,.40),rgba(120,170,255,.16) 50%,rgba(120,170,255,0) 76%);
   }
-  [data-theme="dark"] .orb{opacity:.34}
-  [data-theme="dark"] .orb.o2{opacity:.38}
-  [data-theme="dark"] .orb.o3{opacity:.30}
-  [data-theme="dark"] .orb.o4{opacity:.30}
-  [data-theme="dark"] .orb.o5{opacity:.26}
+  /* 背景色块在深底上要换成"更深的同色系"：浅色版那几块高明度色块
+     铺在黑底上只会浮出一层脏灰，得压深、提饱和，玻璃才有东西可折射 */
+  [data-theme="dark"] .orb{opacity:.44}
+  [data-theme="dark"] .orb.o1{background:#3d70e6}
+  [data-theme="dark"] .orb.o2{background:#1fb9a6;opacity:.46}
+  [data-theme="dark"] .orb.o3{background:#d9609f;opacity:.38}
+  [data-theme="dark"] .orb.o4{background:#6d63e8;opacity:.40}
+  [data-theme="dark"] .orb.o5{background:#4179f0;opacity:.34}
   [data-theme="dark"] header.scrolled nav{
     background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.05) 55%,rgba(255,255,255,.10));
   }
@@ -155,6 +167,21 @@
   }
   [data-theme="dark"] footer .line{background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent)}
   [data-theme="dark"] footer a{border-color:rgba(255,255,255,.16)}
+
+  /* 投影：浅色那套用的是"蓝灰投影"（38,66,150），在深底上会糊成一片发灰的雾。
+     深色下一律换成更重的黑投影，光晕继续交给 var(--glass-glow)（它已按主题改过）。 */
+  [data-theme="dark"] nav{box-shadow:0 12px 38px rgba(0,0,0,.42),var(--glass-glow),var(--glass-inner)}
+  [data-theme="dark"] header.scrolled nav{box-shadow:0 18px 48px rgba(0,0,0,.50),var(--glass-glow),var(--glass-inner)}
+  [data-theme="dark"] .dock{box-shadow:0 16px 46px rgba(0,0,0,.48),var(--glass-glow),var(--glass-inner)}
+  [data-theme="dark"] .dock .blob{box-shadow:0 10px 26px rgba(0,0,0,.45),var(--glass-glow),var(--glass-inner)}
+  [data-theme="dark"] .btn.ghost{box-shadow:0 12px 34px rgba(0,0,0,.40),var(--glass-glow),var(--glass-inner)}
+  [data-theme="dark"] .btn.ghost:hover{box-shadow:0 18px 42px rgba(0,0,0,.48),var(--glass-glow),var(--glass-inner)}
+  [data-theme="dark"] .chip{box-shadow:0 2px 8px rgba(0,0,0,.32),inset 0 12px 18px -14px rgba(255,255,255,.14)}
+  [data-theme="dark"] .chip:hover{box-shadow:0 10px 22px rgba(0,0,0,.42)}
+  [data-theme="dark"] .project:hover{box-shadow:0 24px 60px rgba(0,0,0,.48),0 0 60px rgba(96,150,255,.16)}
+  [data-theme="dark"] .social:hover{box-shadow:0 18px 44px rgba(0,0,0,.48),0 0 54px rgba(96,150,255,.16),var(--glass-inner)}
+  /* 主按钮在深色下是"亮底深字"，白色涟漪会看不见 → 换成深涟漪 */
+  [data-theme="dark"] .btn.primary .ripple{background:radial-gradient(circle,rgba(21,24,31,.20),rgba(21,24,31,0) 70%)}
 
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -227,21 +254,29 @@
 
   /* ---------- 指针光感：所有"非背景"的东西上都有一团跟着光标走的柔光 ----------
      作用对象：导航胶囊、按钮、标签 chip、Dock、以及各玻璃面板（都挂 .liquid）。
-     可调：--gr 光斑半径 | --ga 强度 | --gc 外圈色(r,g,b，默认暖白，不染色)
+     可调：--gr 光斑半径 | --ga 强度 | --ga-k 主题系数（深色下统一压低，见下）
+           --gc-core 光心 | --gc-mid 中段 | --gc-edge 外圈（r,g,b）
      表现：中心偏白 → 单调衰减到透明，像"光标处有个光源"，不能出现任何色环。
      关键：光用 z-index:-1 夹在"玻璃底"和"文字"之间 —— 文字永远不会被洗白。
+          ★ 深色主题下同样一团白光会变成一块过曝的白斑，所以要换冷色 + 压强度：
+            颜色换成冷蓝、强度乘以 --ga-k（深色 .62）。各组件自己的 --ga 不用重写。
      （依赖元素本身是层叠上下文：玻璃靠 backdrop-filter，chip / 主按钮补 isolation） */
-  .liquid{position:relative;--gr:280px;--ga:.46;--gc:255,250,242}
+  .liquid{
+    position:relative;--gr:280px;--ga:.46;
+    --gc-core:255,255,255;
+    --gc-mid:255,255,253;
+    --gc-edge:255,250,242;
+  }
   .liquid::after{
     content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
     /* 多段单调衰减：0% 纯白光源 → 中段极淡暖白 → 100% 全透明。
        中间不再压一个彩色高 alpha 的环，所以不会看到"一圈蓝的"。 */
     background:radial-gradient(var(--gr) circle at var(--mx,50%) var(--my,50%),
-      rgba(255,255,255,calc(var(--ga) * .95)) 0%,
-      rgba(255,255,253,calc(var(--ga) * .60)) 16%,
-      rgba(var(--gc),calc(var(--ga) * .30)) 38%,
-      rgba(var(--gc),calc(var(--ga) * .10)) 62%,
-      rgba(var(--gc),0) 100%);
+      rgba(var(--gc-core),calc(var(--ga) * var(--ga-k,1) * .95)) 0%,
+      rgba(var(--gc-mid), calc(var(--ga) * var(--ga-k,1) * .60)) 16%,
+      rgba(var(--gc-edge),calc(var(--ga) * var(--ga-k,1) * .30)) 38%,
+      rgba(var(--gc-edge),calc(var(--ga) * var(--ga-k,1) * .10)) 62%,
+      rgba(var(--gc-edge),0) 100%);
     opacity:0;transition:opacity .45s var(--ease);
   }
   .liquid:hover::after{opacity:1}
@@ -908,7 +943,7 @@
           <div class="fact"><span>专业</span><span>机械设计与自动化</span></div>
           <div class="fact"><span>年级</span><span>2025 级</span></div>
           <div class="fact"><span>邮箱</span><span>you@example.com</span></div>
-          <div class="fact"><span>GitHub</span><span>@你的用户名</span></div>
+          <div class="fact"><span>GitHub</span><span>@abto-467</span></div>
         </div>
       </div>
     </div>
@@ -977,7 +1012,7 @@
           <span class="tag">在做</span>
           <h3>你正在看的这个网站</h3>
           <p>单文件手写，零依赖零构建，液态玻璃风格。所有样式和交互都在一个 HTML 里，方便随时改。</p>
-          <a class="link" href="https://github.com/你的用户名" target="_blank" rel="noopener">在 GitHub 上看 <span>→</span></a>
+          <a class="link" href="https://github.com/abto-467" target="_blank" rel="noopener">在 GitHub 上看 <span>→</span></a>
         </div>
       </div>
     </div>
@@ -992,7 +1027,7 @@
     <p class="lead reveal" style="--d:.06s">同学、学长学姐，或者对同样的事情感兴趣的人，都欢迎来找我。看到消息我会回。</p>
     <div class="socials reveal" style="--d:.14s">
       <a class="social glass liquid tilt" data-tilt="10" href="mailto:you@example.com">邮箱</a>
-      <a class="social glass liquid tilt" data-tilt="10" href="https://github.com/你的用户名" target="_blank" rel="noopener">GitHub</a>
+      <a class="social glass liquid tilt" data-tilt="10" href="https://github.com/abto-467" target="_blank" rel="noopener">GitHub</a>
       <a class="social glass liquid tilt" data-tilt="10" href="#" target="_blank" rel="noopener">简历</a>
     </div>
   </section>
@@ -1051,11 +1086,11 @@
     function paint(t){
       apply(t);
       /* 标题碎片是按"当时的主题色"采样的，换主题要重采一次。
-         但不能在这里当场重建 —— 那 15000 个点的采样会卡在圆扩散动画中间；
-         压在动画结束之后再重建（rebuild 自己还有 260ms 去抖）。 */
+         但不能在这里当场重建 —— 那 15000 个点的采样会把圆扩散动画的开场拖住；
+         压在动画快结束时再重建（rebuild 自己还有 260ms 去抖）。 */
       setTimeout(function(){
         if(typeof titleFx !== 'undefined' && titleFx) titleFx.rebuild();
-      }, 720);
+      }, 380);
     }
     function toggle(x, y){
       var t = get() === 'dark' ? 'light' : 'dark';
