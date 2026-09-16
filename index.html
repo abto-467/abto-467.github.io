@@ -7,7 +7,17 @@
 <meta name="description" content="Abto-467 的个人主页 —— 西南交通大学机械设计与自动化专业 2025 级学生。">
 <meta name="theme-color" content="#f4f6fb">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%232f6bff'/%3E%3C/svg%3E">
-<script>document.documentElement.className += ' js';</script>
+<script>
+/* 主题必须在样式生效前（首帧绘制前）就定下来，否则会先闪一帧浅色再变暗。
+   规则：本地记住的选择 > 浅色（默认就是浅色，站点的原版观感，不跟随系统）。 */
+(function(){
+  var d = document.documentElement, t = null;
+  try{ t = localStorage.getItem('abto-theme'); }catch(e){}
+  if(t !== 'dark' && t !== 'light') t = 'light';
+  d.setAttribute('data-theme', t);
+  d.className += ' js';
+})();
+</script>
 <style>
   :root{
     --bg:#eceffa;
@@ -55,7 +65,96 @@
     /* 动效曲线 */
     --spring:cubic-bezier(.22,1,.36,1);
     --ease:cubic-bezier(.4,0,.2,1);
+
+    /* 新组件（工具按钮 / 命令面板）用的两层薄色膜：
+       --film 悬停与图标底 | --film-2 选中项 */
+    --film:rgba(21,24,31,.055);
+    --film-2:rgba(47,107,255,.10);
   }
+
+  /* ---------- 暗色主题（第 33 轮）----------
+     同一套玻璃在深底上的完整配方：白膜更薄、边缘冷光更亮、投影换成纯黑、
+     内光晕减弱；背景色块整体压暗（不压的话黑底上会浮出一层脏灰）。
+     ★ 底色只在下面这一个 --bg 上，想换"近纯黑"就改这一行（#0e1116 → #06070a）。 */
+  [data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#0e1116;
+    --ink:#e9edf6;
+    --ink-2:#a7b0c4;
+    --ink-3:#78829a;
+
+    /* 深底上饱和度高的蓝会"发闷"，整体提亮一档 */
+    --accent:#5b8cff;
+    --accent-2:#22cfc0;
+    --accent-3:#ff7ab2;
+
+    --glass-bg:linear-gradient(150deg,rgba(255,255,255,.085),rgba(255,255,255,.022) 46%,rgba(255,255,255,.055));
+    --glass-bg-strong:linear-gradient(150deg,rgba(255,255,255,.135),rgba(255,255,255,.045) 55%,rgba(255,255,255,.09));
+    --glass-shadow:0 18px 50px rgba(0,0,0,.46),0 2px 10px rgba(0,0,0,.30),
+                   0 0 44px rgba(96,150,255,.10),
+                   inset 0 22px 36px -28px rgba(255,255,255,.18),
+                   var(--glass-inner);
+    /* 冷光边在深底上要更亮才看得见，但依旧只有冷色/无色 */
+    --glass-rim:linear-gradient(140deg,
+      rgba(170,208,255,.42) 0%,
+      rgba(214,234,255,.16) 26%,
+      rgba(255,255,255,.07) 54%,
+      rgba(255,255,255,.12) 78%,
+      rgba(196,222,255,.22) 100%);
+    --glass-inner:inset 0 0 30px -22px rgba(255,255,255,.22),
+                  inset 10px 12px 24px -20px rgba(132,178,255,.20);
+    --glass-glow:0 0 46px rgba(96,150,255,.13),
+                 -10px -12px 30px -26px rgba(132,178,255,.30);
+
+    --film:rgba(255,255,255,.08);
+    --film-2:rgba(91,140,255,.16);
+  }
+
+  /* 深色下逐条修掉写死颜色的地方（浅色配方不能直接复用） */
+  [data-theme="dark"] .bg::before{
+    background:radial-gradient(closest-side,rgba(150,190,255,.16),rgba(150,190,255,0) 74%);
+  }
+  [data-theme="dark"] .bg::after{
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0) 30%,rgba(255,255,255,.035));
+  }
+  [data-theme="dark"] .bg-rip{
+    background:radial-gradient(closest-side,rgba(140,180,255,.40),rgba(120,170,255,.16) 50%,rgba(120,170,255,0) 76%);
+  }
+  [data-theme="dark"] .orb{opacity:.34}
+  [data-theme="dark"] .orb.o2{opacity:.38}
+  [data-theme="dark"] .orb.o3{opacity:.30}
+  [data-theme="dark"] .orb.o4{opacity:.30}
+  [data-theme="dark"] .orb.o5{opacity:.26}
+  [data-theme="dark"] header.scrolled nav{
+    background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.05) 55%,rgba(255,255,255,.10));
+  }
+  [data-theme="dark"] nav .progress{background:rgba(255,255,255,.10)}
+  [data-theme="dark"] .hero::before{
+    background:radial-gradient(closest-side,rgba(90,140,255,.24),rgba(0,184,169,.10) 55%,rgba(90,140,255,0) 78%);
+  }
+  [data-theme="dark"] .hero h1{color:#9fb8ff}
+  [data-theme="dark"] .hero h1 .mark{
+    background:linear-gradient(120deg,#7ba6ff 0%,#9bb2ff 40%,#35dfcd 100%);
+    background-size:220% 100%;
+  }
+  /* 主按钮在深底上反过来：亮底 + 深字，才是"最重"的那一颗 */
+  [data-theme="dark"] .btn.primary{background:#eef2fb;color:#12161f;box-shadow:0 10px 26px rgba(0,0,0,.45)}
+  [data-theme="dark"] .btn.primary:hover{box-shadow:0 18px 38px rgba(0,0,0,.55)}
+  [data-theme="dark"] .btn.ghost:hover{background:linear-gradient(150deg,rgba(255,255,255,.20),rgba(255,255,255,.07) 55%,rgba(255,255,255,.14))}
+  [data-theme="dark"] .chip{background:linear-gradient(150deg,rgba(255,255,255,.10),rgba(255,255,255,.04))}
+  [data-theme="dark"] .chip:hover{background:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.08))}
+  [data-theme="dark"] .fact,[data-theme="dark"] .skill-row + .skill-row{border-color:rgba(255,255,255,.08)}
+  [data-theme="dark"] .project .tag{background:rgba(91,140,255,.16)}
+  /* tooltip 在深色下是深玻璃胶囊 + 亮字（浅色下仍是浅底，见 .dock .tip） */
+  [data-theme="dark"] .dock .tip{
+    background:rgba(30,36,50,.94);color:var(--ink);
+    box-shadow:0 10px 28px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  [data-theme="dark"] .social:hover{
+    background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.05) 46%,rgba(255,255,255,.10));
+  }
+  [data-theme="dark"] footer .line{background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent)}
+  [data-theme="dark"] footer a{border-color:rgba(255,255,255,.16)}
 
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -577,6 +676,134 @@
     .hero{padding:118px 0 170px}
   }
 
+  /* ---------- 第 33 轮新组件 ---------- */
+
+  /* 跳到主内容（键盘用户第一个 Tab 能拿到，平时藏在视口外） */
+  .skip{
+    position:fixed;left:50%;top:-64px;z-index:200;transform:translateX(-50%);
+    padding:11px 20px;border-radius:0 0 14px 14px;text-decoration:none;
+    background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:560;
+    transition:top .3s var(--ease);
+  }
+  .skip:focus{top:0}
+
+  /* 焦点环：冷色，和玻璃边缘同一个语言。只在键盘操作时出现（:focus-visible） */
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  /* 顶部胶囊右侧的两枚工具按钮：命令面板 + 主题 */
+  .nav-tools{display:flex;align-items:center;gap:6px;position:relative;z-index:1}
+  .tool-btn{
+    width:34px;height:34px;border-radius:999px;border:none;cursor:pointer;
+    display:grid;place-items:center;background:transparent;color:var(--ink-2);
+    transition:color .3s var(--ease),background .3s var(--ease),transform .45s var(--spring);
+    isolation:isolate;            /* 光斑关在按钮内部、压在图标下面 */
+    --gr:90px;--ga:.42;
+  }
+  .tool-btn:hover{color:var(--accent);background:var(--film)}
+  .tool-btn:active{transform:scale(.92)}
+  .tool-btn svg{
+    width:18px;height:18px;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  }
+  /* 主题按钮的图标 = "点了会变成什么"：浅色时显示月亮，深色时显示太阳 */
+  .tool-btn .ico-sun{display:none}
+  [data-theme="dark"] .tool-btn .ico-sun{display:block}
+  [data-theme="dark"] .tool-btn .ico-moon{display:none}
+
+  /* 回到顶部：滚过一屏后从右下角浮出来 */
+  .totop{
+    position:fixed;right:26px;bottom:26px;z-index:65;cursor:pointer;border:none;
+    width:46px;height:46px;border-radius:999px;
+    display:grid;place-items:center;color:var(--ink-2);
+    opacity:0;pointer-events:none;transform:translate3d(0,12px,0);
+    transition:opacity .45s var(--ease),transform .55s var(--spring),color .3s var(--ease);
+    --gr:190px;--ga:.46;
+  }
+  .totop.show{opacity:1;pointer-events:auto;transform:none}
+  .totop:hover{color:var(--accent)}
+  .totop svg{width:19px;height:19px;fill:none;stroke:currentColor;
+    stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  /* 窄屏时 Dock 在底部正中，按钮往上让一格 */
+  @media(max-width:1365px){ .totop{right:16px;bottom:86px} }
+
+  /* ---------- ⌘K 命令面板 ---------- */
+  .cmdk{
+    position:fixed;inset:0;z-index:120;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:13vh 20px 20px;
+  }
+  .cmdk[hidden]{display:none}
+  .cmdk-mask{
+    position:absolute;inset:0;background:rgba(12,16,26,.26);
+    -webkit-backdrop-filter:blur(7px) saturate(150%);backdrop-filter:blur(7px) saturate(150%);
+    animation:cmdk-fade .3s var(--ease) both;
+  }
+  [data-theme="dark"] .cmdk-mask{background:rgba(4,6,12,.52)}
+  .cmdk-panel{
+    position:relative;width:min(560px,100%);border-radius:20px;overflow:hidden;
+    animation:cmdk-in .36s var(--spring) both;
+  }
+  @keyframes cmdk-fade{from{opacity:0}to{opacity:1}}
+  @keyframes cmdk-in{from{opacity:0;transform:translateY(-16px) scale(.965)}to{opacity:1;transform:none}}
+  .cmdk-row{
+    display:flex;align-items:center;gap:11px;padding:15px 18px;
+    border-bottom:1px solid rgba(21,24,31,.07);
+  }
+  [data-theme="dark"] .cmdk-row{border-bottom-color:rgba(255,255,255,.08)}
+  .cmdk-row>svg{width:17px;height:17px;flex:none;fill:none;stroke:var(--ink-3);
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cmdk-row input{
+    flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--ink);
+    font:inherit;font-size:15px;letter-spacing:.1px;
+  }
+  .cmdk-row input::placeholder{color:var(--ink-3)}
+  .cmdk-row kbd{
+    flex:none;font-family:inherit;font-size:11px;color:var(--ink-3);
+    padding:3px 7px;border-radius:6px;background:var(--film);
+    border:1px solid rgba(21,24,31,.07);
+  }
+  [data-theme="dark"] .cmdk-row kbd{border-color:rgba(255,255,255,.10)}
+  .cmdk-list{max-height:min(46vh,364px);overflow-y:auto;padding:8px;overscroll-behavior:contain}
+  .cmdk-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:13px;cursor:pointer}
+  .cmdk-item .ci{
+    width:32px;height:32px;flex:none;border-radius:10px;display:grid;place-items:center;
+    background:var(--film);color:var(--accent);
+  }
+  .cmdk-item .ci svg{width:16px;height:16px;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cmdk-item .ct{flex:1;min-width:0}
+  .cmdk-item .ct b{display:block;font-size:14px;font-weight:560;letter-spacing:.1px}
+  .cmdk-item .ct i{display:block;font-style:normal;font-size:12px;color:var(--ink-3);margin-top:2px}
+  .cmdk-item .ck{flex:none;font-size:11.5px;color:var(--ink-3);opacity:0;transition:opacity .2s var(--ease)}
+  .cmdk-item.on{background:var(--film-2)}
+  .cmdk-item.on .ck{opacity:.85}
+  .cmdk-empty{padding:26px 16px;text-align:center;color:var(--ink-3);font-size:13.5px}
+
+  /* 复制邮箱之类的一次性提示 */
+  .toast{
+    position:fixed;left:50%;bottom:32px;z-index:150;
+    transform:translate3d(-50%,14px,0);
+    padding:11px 20px;border-radius:999px;
+    font-size:13.5px;font-weight:540;color:var(--ink);
+    opacity:0;pointer-events:none;
+    transition:opacity .35s var(--ease),transform .45s var(--spring);
+  }
+  .toast.show{opacity:1;transform:translate3d(-50%,0,0)}
+  @media(max-width:1365px){ .toast{bottom:96px} }
+
+  /* ---------- 主题切换的圆形扩散（View Transitions）----------
+     点主题按钮时，新主题从按钮位置以圆扩散铺开。
+     浏览器不支持 startViewTransition 时这段 CSS 完全不生效，切换就是瞬时的。 */
+  @supports (view-transition-name:none){
+    ::view-transition-old(root),
+    ::view-transition-new(root){animation:none;mix-blend-mode:normal}
+    html[data-vt="theme"]::view-transition-new(root){animation:vt-circle .62s var(--ease) both}
+    @keyframes vt-circle{
+      from{clip-path:circle(0% at var(--vt-x,92%) var(--vt-y,4%))}
+      to{clip-path:circle(150% at var(--vt-x,92%) var(--vt-y,4%))}
+    }
+  }
+
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
     *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
@@ -586,10 +813,16 @@
   }
   @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
     .glass,nav,.btn.ghost,.dock{background:rgba(255,255,255,.94)}
+    [data-theme="dark"] .glass,
+    [data-theme="dark"] nav,
+    [data-theme="dark"] .btn.ghost,
+    [data-theme="dark"] .dock{background:rgba(24,28,38,.94)}
   }
 </style>
 </head>
 <body id="top">
+
+<a class="skip" href="#main">跳到主内容</a>
 
 <div class="bg">
   <span class="orb o1" data-parallax="0.06"></span>
@@ -599,11 +832,22 @@
   <span class="orb o5" data-parallax="0.04"></span>
 </div>
 
-<!-- 顶部胶囊：只保留 logo + 滚动进度条（第 25 轮：四个栏目链接已删，与 Dock 重复） -->
+<!-- 顶部胶囊：logo + 右侧两枚工具按钮 + 滚动进度条（第 25 轮：四个栏目链接已删，与 Dock 重复） -->
 <header id="siteHeader">
   <div class="wrap">
     <nav class="liquid">
       <a class="logo" href="#top"><i></i>Abto-467</a>
+      <div class="nav-tools">
+        <button class="tool-btn liquid" id="btnSearch" type="button"
+                aria-label="打开命令面板" title="命令面板 · Ctrl/⌘ + K">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.4"/><path d="m15.8 15.8 4.2 4.2"/></svg>
+        </button>
+        <button class="tool-btn liquid" id="btnTheme" type="button"
+                aria-label="切换深色 / 浅色主题" title="切换主题">
+          <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 14.3A8.4 8.4 0 0 1 9.7 3.6a8.4 8.4 0 1 0 10.7 10.7z"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></svg>
+        </button>
+      </div>
       <div class="progress"><i id="scrollBar"></i></div>
     </nav>
   </div>
@@ -631,7 +875,7 @@
   </a>
 </aside>
 
-<main>
+<main id="main">
   <!-- Hero -->
   <section class="hero wrap">
     <div class="hero-titlebox reveal" style="--d:.08s">
@@ -754,6 +998,25 @@
   </section>
 </main>
 
+<!-- ⌘K 命令面板：Ctrl / ⌘ + K 唤起，也点顶栏的搜索按钮 -->
+<div class="cmdk" id="cmdk" hidden>
+  <div class="cmdk-mask" id="cmdkMask"></div>
+  <div class="cmdk-panel glass liquid" role="dialog" aria-modal="true" aria-label="命令面板">
+    <div class="cmdk-row">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.4"/><path d="m15.8 15.8 4.2 4.2"/></svg>
+      <input id="cmdkInput" type="text" placeholder="搜索栏目或动作…" autocomplete="off"
+             spellcheck="false" role="combobox" aria-expanded="true" aria-controls="cmdkList" aria-label="搜索命令">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="cmdk-list" id="cmdkList" role="listbox" aria-label="命令列表"></div>
+  </div>
+</div>
+
+<!-- 回到顶部：滚过一屏后出现 -->
+<button class="totop glass liquid" id="totop" type="button" aria-label="回到顶部" title="回到顶部">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.4V5.4M5.8 11.6 12 5.4l6.2 6.2"/></svg>
+</button>
+
 <footer>
   <div class="wrap">
     <div class="line"></div>
@@ -768,6 +1031,49 @@
   var fine    = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
   document.getElementById('year').textContent = new Date().getFullYear();
+
+  /* ---------- 0. 主题：light / dark ----------
+     首帧前那次设值在 <head> 的内联脚本里（防闪白），这里只负责"改"：
+     写 <html data-theme> → 写 localStorage → 更新浏览器地址栏配色 → 通知订阅者。
+     切换时优先用 View Transitions 做圆扩散；不支持 / 开了减弱动效 → 直接换。 */
+  var THEME = (function(){
+    var KEY = 'abto-theme';
+    var rootEl = document.documentElement;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    var subs = [];
+    function get(){ return rootEl.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+    function apply(t){
+      rootEl.setAttribute('data-theme', t);
+      if(meta) meta.setAttribute('content', t === 'dark' ? '#0e1116' : '#f4f6fb');
+      try{ localStorage.setItem(KEY, t); }catch(e){}
+      for(var i=0;i<subs.length;i++){ try{ subs[i](t); }catch(e){} }
+    }
+    function paint(t){
+      apply(t);
+      /* 标题碎片是按"当时的主题色"采样的，换主题要重采一次。
+         但不能在这里当场重建 —— 那 15000 个点的采样会卡在圆扩散动画中间；
+         压在动画结束之后再重建（rebuild 自己还有 260ms 去抖）。 */
+      setTimeout(function(){
+        if(typeof titleFx !== 'undefined' && titleFx) titleFx.rebuild();
+      }, 720);
+    }
+    function toggle(x, y){
+      var t = get() === 'dark' ? 'light' : 'dark';
+      if(document.startViewTransition && !reduced){
+        rootEl.setAttribute('data-vt', 'theme');
+        rootEl.style.setProperty('--vt-x', (x == null ? window.innerWidth - 46 : x) + 'px');
+        rootEl.style.setProperty('--vt-y', (y == null ? 44 : y) + 'px');
+        var tr = document.startViewTransition(function(){ paint(t); });
+        var end = function(){ rootEl.removeAttribute('data-vt'); };
+        if(tr && tr.finished && tr.finished.then) tr.finished.then(end, end);
+        else setTimeout(end, 900);
+      }else{
+        paint(t);
+      }
+    }
+    return { get:get, apply:apply, toggle:toggle,
+             onChange:function(fn){ subs.push(fn); } };
+  })();
 
   /* ---------- 1. 滚动入场（--d 控制逐个延迟） ---------- */
   var io = new IntersectionObserver(function(entries){
@@ -921,13 +1227,23 @@
       var g = c.getContext('2d');
       g.font = font; g.textAlign = 'left'; g.textBaseline = 'middle';
       /* 整行一条蓝 → 青的渐变，不再用黑色：
-         滚动之后这行字会变成常驻的 ABTO 背景水印，黑的重色会压住正文。 */
+         滚动之后这行字会变成常驻的 ABTO 背景水印，黑的重色会压住正文。
+         深色主题下整条提亮一档，否则碎片在暗底上糊成一团看不清。 */
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       var gr = g.createLinearGradient(pad, 0, pad + w1 + w2, 0);
-      gr.addColorStop(0,   '#3f6ae0');
-      gr.addColorStop(.34, '#7b8cf2');
-      gr.addColorStop(.58, '#2f6bff');
-      gr.addColorStop(.82, '#5aa8ff');
-      gr.addColorStop(1,   '#00b8a9');
+      if(dark){
+        gr.addColorStop(0,   '#8cb0ff');
+        gr.addColorStop(.34, '#a6bbff');
+        gr.addColorStop(.58, '#6f9bff');
+        gr.addColorStop(.82, '#84ccff');
+        gr.addColorStop(1,   '#35dfcd');
+      }else{
+        gr.addColorStop(0,   '#3f6ae0');
+        gr.addColorStop(.34, '#7b8cf2');
+        gr.addColorStop(.58, '#2f6bff');
+        gr.addColorStop(.82, '#5aa8ff');
+        gr.addColorStop(1,   '#00b8a9');
+      }
       g.fillStyle = gr;
       if(pre)  g.fillText(pre,  pad, chh/2);
       if(mark) g.fillText(mark, pad+w1, chh/2);
@@ -945,7 +1261,7 @@
       c.width = cw; c.height = chh;
       var g = c.getContext('2d');
       g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = '#2f6bff';
+      g.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#6f9bff' : '#2f6bff';
       g.fillText(text, cw/2, chh/2);
       return recenter(inkPoints(c)).pts;
     }
@@ -1718,6 +2034,9 @@
     var h = document.documentElement.scrollHeight - window.innerHeight;
     bar.style.width = (h > 0 ? Math.min(y/h,1)*100 : 0) + '%';
 
+    /* 回到顶部按钮：滚过一屏才浮出来（toTop 在下面的初始化段里赋值） */
+    if(toTop) toTop.classList.toggle('show', y > window.innerHeight * 1.2);
+
     var scrolled = y > 8;
     if(header.classList.contains('scrolled') !== scrolled) header.classList.toggle('scrolled', scrolled);
 
@@ -1788,6 +2107,210 @@
   window.addEventListener('mousedown', function(e){
     if(e.target === document.documentElement) releasePin();   // 点在滚动条上
   });
+
+  /* ---------- 11. ⌘K 命令面板（第 33 轮）----------
+     零依赖手写。模糊匹配只做两档：子串命中优先，命中不了再退到
+     "按顺序逐个字母出现"（hel → Hello）。条目就是页面里真实存在的栏目
+     加几个动作；跳转直接复用 Dock 的点击（选框钉住 + 平滑滚动那一套），
+     不另写一份滚动逻辑，免得两套行为不一致。 */
+  var cmdk = (function(){
+    var box    = document.getElementById('cmdk');
+    var mask   = document.getElementById('cmdkMask');
+    var input  = document.getElementById('cmdkInput');
+    var listEl = document.getElementById('cmdkList');
+    var trigger= document.getElementById('btnSearch');
+    if(!box || !input || !listEl) return null;
+
+    var ICON = {
+      home : '<path d="M4 10.6 12 4l8 6.6V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19z"/>',
+      user : '<circle cx="12" cy="8.4" r="3.6"/><path d="M5 20.2c0-3.4 3.1-5.6 7-5.6s7 2.2 7 5.6"/>',
+      book : '<path d="m12 3.2 8.8 4.9-8.8 4.9-8.8-4.9z"/><path d="m3.2 13.4 8.8 4.9 8.8-4.9"/>',
+      grid : '<rect x="3.4" y="3.4" width="7.2" height="7.2" rx="2.2"/><rect x="13.4" y="3.4" width="7.2" height="7.2" rx="2.2"/><rect x="3.4" y="13.4" width="7.2" height="7.2" rx="2.2"/><rect x="13.4" y="13.4" width="7.2" height="7.2" rx="2.2"/>',
+      mail : '<rect x="2.8" y="5" width="18.4" height="14" rx="2.6"/><path d="m4.4 7.6 7.6 5.2 7.6-5.2"/>',
+      sun  : '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/>',
+      code : '<path d="m9 8.4-4.2 3.6L9 15.6M15 8.4l4.2 3.6L15 15.6"/>',
+      up   : '<path d="M12 19.4V5.4M5.8 11.6 12 5.4l6.2 6.2"/>'
+    };
+    var ITEMS = [
+      {id:'top',      t:'首页',         d:'回到页面顶部',           ic:'home', k:'home top 顶部 首页 回到顶部'},
+      {id:'about',    t:'关于我',       d:'跳转到 01 · 关于我',      ic:'user', k:'about 关于 介绍'},
+      {id:'skills',   t:'我在学什么',   d:'跳转到 02 · 我在学什么',  ic:'book', k:'skills 学习 技能 课程'},
+      {id:'projects', t:'现在在做什么', d:'跳转到 03 · 现在在做什么',ic:'grid', k:'projects 项目 在做 作品'},
+      {id:'contact',  t:'一起聊聊',     d:'跳转到 04 · 一起聊聊',    ic:'mail', k:'contact 联系 邮箱 邮件'},
+      {id:'theme',    t:'切换主题',     d:'浅色 / 暗色玻璃之间切换', ic:'sun',  k:'theme dark light 主题 深色 暗色 浅色'},
+      {id:'mail',     t:'复制邮箱',     d:'把邮箱复制到剪贴板',      ic:'mail', k:'mail email copy 邮箱 复制'},
+      {id:'github',   t:'打开 GitHub',  d:'在新标签页打开 GitHub',   ic:'code', k:'github 仓库 代码 开源'}
+    ];
+    var view = ITEMS.slice(), sel = 0, isOpen = false, lastFocus = null;
+
+    function norm(s){ return (s || '').toLowerCase().replace(/\s+/g, ''); }
+    function score(it, q){
+      if(!q) return 1;
+      var title = norm(it.t), hay = norm(it.t + it.d + it.k);
+      var i = title.indexOf(q);
+      if(i === 0) return 100;                    /* 标题开头命中，最优先 */
+      if(i > 0)  return 70 - Math.min(i, 20);
+      if(hay.indexOf(q) >= 0) return 50;         /* 标题外的字段命中 */
+      var p = 0;                                 /* 顺序字母兜底 */
+      for(var j = 0; j < q.length; j++){
+        p = hay.indexOf(q.charAt(j), p);
+        if(p === -1) return -1;
+        p++;
+      }
+      return 20;
+    }
+    function render(q){
+      q = norm(q);
+      var hits = [], i;
+      for(i = 0; i < ITEMS.length; i++){
+        var s = score(ITEMS[i], q);
+        if(s >= 0) hits.push({it:ITEMS[i], s:s});
+      }
+      if(q) hits.sort(function(a,b){ return b.s - a.s; });
+      view = hits.map(function(o){ return o.it; });
+
+      if(!view.length){ listEl.innerHTML = '<div class="cmdk-empty">没有匹配的项</div>'; sel = -1; return; }
+      var html = '';
+      for(i = 0; i < view.length; i++){
+        html += '<div class="cmdk-item" data-i="' + i + '" role="option" aria-selected="false">' +
+          '<span class="ci"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICON[view[i].ic] + '</svg></span>' +
+          '<span class="ct"><b>' + view[i].t + '</b><i>' + view[i].d + '</i></span>' +
+          '<span class="ck">↵</span></div>';
+      }
+      listEl.innerHTML = html;
+      highlight(0, false);
+    }
+    function highlight(i, scroll){
+      var items = listEl.querySelectorAll('.cmdk-item');
+      if(!items.length){ sel = -1; return; }
+      if(i < 0) i = items.length - 1;
+      if(i >= items.length) i = 0;
+      for(var j = 0; j < items.length; j++){
+        var on = (j === i);
+        items[j].classList.toggle('on', on);
+        items[j].setAttribute('aria-selected', on ? 'true' : 'false');
+      }
+      sel = i;
+      if(scroll && items[i].scrollIntoView) items[i].scrollIntoView({block:'nearest'});
+    }
+    function toast(msg){
+      var t = document.getElementById('toast');
+      if(!t){
+        t = document.createElement('div');
+        t.id = 'toast'; t.className = 'toast glass';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(t._h);
+      t._h = setTimeout(function(){ t.classList.remove('show'); }, 2000);
+    }
+    function copyText(text, label){
+      if(!text){ toast('没有可复制的内容'); return; }
+      var ok = function(){ toast(label + '已复制：' + text); };
+      var fallback = function(){
+        try{
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.setAttribute('readonly','');
+          ta.style.position = 'fixed'; ta.style.left = '-9999px';
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); ta.remove(); ok();
+        }catch(e){ toast('复制失败，请手动复制'); }
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(ok, fallback);
+      }else fallback();
+    }
+    function exec(i){
+      var it = view[i];
+      if(!it) return;
+      close();
+      if(it.id === 'theme'){ THEME.toggle(); return; }
+      if(it.id === 'mail'){
+        var a = document.querySelector('.social[href^="mailto:"]');
+        copyText(a ? a.getAttribute('href').replace(/^mailto:/, '') : '', '邮箱');
+        return;
+      }
+      if(it.id === 'github'){
+        var g = document.querySelector('.social[href*="github.com"]') ||
+                document.querySelector('.project a[href*="github.com"]');
+        if(g) window.open(g.href, '_blank', 'noopener');
+        return;
+      }
+      var link = document.querySelector('.dock a[href="#' + it.id + '"]');
+      if(link){ link.click(); return; }
+      var target = document.getElementById(it.id);
+      if(target) target.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block:'start'});
+    }
+    function openIt(){
+      if(isOpen) return;
+      isOpen = true;
+      lastFocus = document.activeElement;
+      box.hidden = false;
+      input.value = '';
+      render('');
+      if(glassFx) glassFx.run();     /* 面板是第一次显形，现在才量得到尺寸 —— 补一次折射 */
+      setTimeout(function(){ try{ input.focus(); }catch(e){} }, 30);
+    }
+    function close(){
+      if(!isOpen) return;
+      isOpen = false;
+      box.hidden = true;
+      var back = (lastFocus && lastFocus.focus) ? lastFocus : trigger;
+      if(back){ try{ back.focus(); }catch(e){} }
+    }
+
+    input.addEventListener('input', function(){ render(input.value); });
+    input.addEventListener('keydown', function(e){
+      var k = e.key;
+      if(k === 'ArrowDown'){ e.preventDefault(); highlight(sel + 1, true); }
+      else if(k === 'ArrowUp'){ e.preventDefault(); highlight(sel - 1, true); }
+      else if(k === 'Enter'){ e.preventDefault(); exec(sel); }
+      else if(k === 'Escape'){ e.preventDefault(); close(); }
+      else if(k === 'Tab'){ e.preventDefault(); }        /* 焦点留在输入框，⇅ 才一直有效 */
+    });
+    listEl.addEventListener('mousemove', function(e){
+      var it = e.target && e.target.closest ? e.target.closest('.cmdk-item') : null;
+      if(it && +it.dataset.i !== sel) highlight(+it.dataset.i, false);
+    });
+    listEl.addEventListener('click', function(e){
+      var it = e.target && e.target.closest ? e.target.closest('.cmdk-item') : null;
+      if(it) exec(+it.dataset.i);
+    });
+    if(mask) mask.addEventListener('click', close);
+    if(trigger) trigger.addEventListener('click', function(){ if(isOpen) close(); else openIt(); });
+    window.addEventListener('keydown', function(e){
+      var k = (e.key || '').toLowerCase();
+      if((e.ctrlKey || e.metaKey) && k === 'k'){
+        e.preventDefault();
+        if(isOpen) close(); else openIt();
+      }else if(k === 'escape' && isOpen){
+        close();
+      }
+    });
+    return { open: openIt, close: close };
+  })();
+
+  /* ---------- 12. 回到顶部 ---------- */
+  var toTop = document.getElementById('totop');
+  if(toTop){
+    toTop.addEventListener('click', function(){
+      window.scrollTo({ top:0, behavior: reduced ? 'auto' : 'smooth' });
+      releasePin();
+    });
+  }
+
+  /* ---------- 13. 主题按钮：圆扩散从按钮位置铺开 ---------- */
+  var btnTheme = document.getElementById('btnTheme');
+  if(btnTheme){
+    btnTheme.addEventListener('click', function(){
+      var r = btnTheme.getBoundingClientRect();
+      THEME.toggle(r.left + r.width/2, r.top + r.height/2);
+    });
+  }
+  /* 说明：这里**不**跟随系统偏好自动切换 —— 默认就是浅色（站点的原版观感），
+     用户点过一次按钮之后以他的选择为准（存在 localStorage）。
+     跟随系统容易出现"我明明看着浅色，朋友打开是深色"的困惑。 */
 
   /* ---------- 初始化 ---------- */
   if(fine){ bindLiquid(); bindButtons(); if(!reduced) bindTilt(); }
