@@ -1907,34 +1907,49 @@
     return {};
   })();
 
-  /* ---------- 5. 指针光感：所有 .liquid 元素上的柔光跟随光标 ----------
+  /* ---------- 5. 指针光感 + 3D 倾斜：合并成"每帧只量一次、只写一次" ----------
      绑定范围：导航胶囊 / 按钮 / chip / Dock / 各玻璃面板。
-     只写 --mx/--my 两个变量，光斑的绘制与显隐全部交给 CSS。 */
-  function bindLiquid(){
-    document.querySelectorAll('.liquid').forEach(function(el){
-      el.addEventListener('pointermove', function(e){
-        var r = el.getBoundingClientRect();
-        el.style.setProperty('--mx', ((e.clientX-r.left)/r.width*100).toFixed(2)+'%');
-        el.style.setProperty('--my', ((e.clientY-r.top)/r.height*100).toFixed(2)+'%');
-      }, {passive:true});
-    });
-  }
+     光斑（--mx/--my）与倾角（--rx/--ry）都只在 CSS 里消费。
 
-  /* ---------- 6. 3D 倾斜：指针驱动角度，CSS 过渡做阻尼 ---------- */
-  function bindTilt(){
-    document.querySelectorAll('.tilt').forEach(function(el){
+     ★ 第 40 轮修"光标在液态玻璃上光效有延迟"：
+     旧写法是 .liquid 和 .tilt 各挂一个 pointermove，**每次事件**都
+     getBoundingClientRect()（强制同步布局）+ 写自定义属性（当场作废样式）。
+     高回报率鼠标的 pointermove 能到 1000Hz，等于每秒上千次"布局→作废"循环，
+     主线程被塞满、绘制排队，光斑就拖在光标后面。
+     现在事件里只记最新坐标，合并到一帧里量一次、写一次 —— 一帧最多一次布局，
+     而且写的是这一帧最新的坐标，延迟反而比原来更低。 */
+  function bindPointerFx(){
+    [].slice.call(document.querySelectorAll('.liquid, .tilt')).forEach(function(el){
+      var isLiq  = el.classList.contains('liquid');
+      var isTilt = !reduced && el.classList.contains('tilt');
+      if(!isLiq && !isTilt) return;
       var max = parseFloat(el.dataset.tilt || '6');
+      var cx = 0, cy = 0, raf = 0;
+      function flush(){
+        raf = 0;
+        var r = el.getBoundingClientRect();          /* 每帧只量这一次 */
+        if(!r.width || !r.height) return;
+        if(isLiq){
+          el.style.setProperty('--mx', ((cx - r.left) / r.width  * 100).toFixed(2) + '%');
+          el.style.setProperty('--my', ((cy - r.top ) / r.height * 100).toFixed(2) + '%');
+        }
+        if(isTilt){
+          var px = (cx - r.left) / r.width  - .5;
+          var py = (cy - r.top ) / r.height - .5;
+          el.style.setProperty('--rx', (-py * max).toFixed(2) + 'deg');
+          el.style.setProperty('--ry', ( px * max * 1.25).toFixed(2) + 'deg');
+        }
+      }
       el.addEventListener('pointermove', function(e){
-        var r  = el.getBoundingClientRect();
-        var px = (e.clientX-r.left)/r.width  - .5;
-        var py = (e.clientY-r.top )/r.height - .5;
-        el.style.setProperty('--rx', (-py*max).toFixed(2)+'deg');
-        el.style.setProperty('--ry', ( px*max*1.25).toFixed(2)+'deg');
+        cx = e.clientX; cy = e.clientY;
+        if(!raf) raf = requestAnimationFrame(flush);
       }, {passive:true});
-      el.addEventListener('pointerleave', function(){
-        el.style.setProperty('--rx','0deg');
-        el.style.setProperty('--ry','0deg');
-      });
+      if(isTilt){
+        el.addEventListener('pointerleave', function(){
+          el.style.setProperty('--rx','0deg');
+          el.style.setProperty('--ry','0deg');
+        });
+      }
     });
   }
 
@@ -2524,7 +2539,7 @@
      跟随系统容易出现"我明明看着浅色，朋友打开是深色"的困惑。 */
 
   /* ---------- 初始化 ---------- */
-  if(fine){ bindLiquid(); bindButtons(); if(!reduced) bindTilt(); }
+  if(fine){ bindPointerFx(); bindButtons(); }
 
   measureOrbs();
   buildDockAnchors();
