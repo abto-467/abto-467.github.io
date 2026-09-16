@@ -78,50 +78,94 @@
      ★ 底色只在下面这一个 --bg 上，想换"近纯黑"就改这一行（#0e1116 → #06070a）。 */
   [data-theme="dark"]{
     color-scheme:dark;
-    --bg:#0e1116;
-    --ink:#e9edf6;
-    --ink-2:#a7b0c4;
-    --ink-3:#78829a;
+    /* 底色比之前再深一档：霓虹要有"黑"才亮得起来（换近纯黑仍只改这一行） */
+    --bg:#0b0d14;
 
-    /* 深底上饱和度高的蓝会"发闷"，整体提亮一档 */
-    --accent:#5b8cff;
-    --accent-2:#22cfc0;
-    --accent-3:#ff7ab2;
+    --ink:#eceffa;
+    --ink-2:#aab3cc;
+    --ink-3:#7c86a4;
 
-    --glass-bg:linear-gradient(150deg,rgba(255,255,255,.085),rgba(255,255,255,.022) 46%,rgba(255,255,255,.055));
-    --glass-bg-strong:linear-gradient(150deg,rgba(255,255,255,.135),rgba(255,255,255,.045) 55%,rgba(255,255,255,.09));
-    --glass-shadow:0 18px 50px rgba(0,0,0,.46),0 2px 10px rgba(0,0,0,.30),
-                   0 0 44px rgba(96,150,255,.10),
+    /* ---------- 霓虹主色（第 36 轮"霓虹城市"，只作用于暗色主题）----------
+       紫罗兰 + 品红。写成两组：--neon-1/2/3 是实色（画渐变用），
+       --neon-a1/a2 是它的 rgb 三元组（拼 rgba 透明度用）。 */
+    --neon-1:#a06bff;
+    --neon-2:#ff6bd6;
+    --neon-3:#7b5cff;
+    --neon-a1:160,107,255;
+    --neon-a2:255,107,214;
+
+    /* 强调色在暗色下也跟霓虹走：链接 / Dock 高亮 / 序号短线 / 进度条 / logo 圆点 */
+    --accent:#a06bff;
+    --accent-2:#ff6bd6;
+    --accent-3:#7b5cff;
+
+    --glass-bg:linear-gradient(150deg,rgba(255,255,255,.09),rgba(255,255,255,.025) 46%,rgba(255,255,255,.06));
+    --glass-bg-strong:linear-gradient(150deg,rgba(255,255,255,.145),rgba(255,255,255,.05) 55%,rgba(255,255,255,.095));
+    /* 每块玻璃常驻一层很淡的紫光晕 —— 霓虹城市里玻璃是"被灯照着的" */
+    --glass-shadow:0 18px 50px rgba(0,0,0,.52),0 2px 10px rgba(0,0,0,.34),
+                   0 0 54px rgba(var(--neon-a1),.16),
                    inset 0 22px 36px -28px rgba(255,255,255,.18),
                    var(--glass-inner);
-    /* 冷光边在深底上要更亮才看得见，但依旧只有冷色/无色 */
+    /* 边缘：⚠️ 暗色霓虹下**允许**带紫/品红。浅色主题那条"只准冷色、禁粉"的规矩
+       只针对浅底（浅底上粉会被看成"红框"，被投诉过两次）；黑底上它就是灯管本身。 */
     --glass-rim:linear-gradient(140deg,
-      rgba(170,208,255,.42) 0%,
-      rgba(214,234,255,.16) 26%,
-      rgba(255,255,255,.07) 54%,
-      rgba(255,255,255,.12) 78%,
-      rgba(196,222,255,.22) 100%);
-    --glass-inner:inset 0 0 30px -22px rgba(255,255,255,.22),
-                  inset 10px 12px 24px -20px rgba(132,178,255,.20);
-    --glass-glow:0 0 46px rgba(96,150,255,.13),
-                 -10px -12px 30px -26px rgba(132,178,255,.30);
+      rgba(198,170,255,.60) 0%,
+      rgba(214,234,255,.18) 24%,
+      rgba(255,255,255,.07) 52%,
+      rgba(255,170,232,.20) 78%,
+      rgba(255,123,214,.55) 100%);
+    --glass-inner:inset 0 0 30px -22px rgba(255,255,255,.24),
+                  inset 10px 12px 26px -20px rgba(var(--neon-a2),.26);
+    --glass-glow:0 0 34px rgba(var(--neon-a1),.26),
+                 0 0 78px rgba(var(--neon-a2),.14);
 
-    --film:rgba(255,255,255,.08);
-    --film-2:rgba(91,140,255,.16);
+    --film:rgba(255,255,255,.09);
+    --film-2:rgba(var(--neon-a1),.20);
 
-    /* 指针光感在深色下：颜色偏冷 + 强度整体压到 62%
-       （同一团白光在深底上会变成过曝的白斑，还会把玻璃底洗灰） */
-    --ga-k:.62;
+    /* 指针光感：颜色偏冷 + 强度整体压到 66%（白光照黑底会过曝） */
+    --ga-k:.66;
   }
   [data-theme="dark"] .liquid{
-    --gc-core:206,224,255;
-    --gc-mid:176,203,255;
-    --gc-edge:148,188,255;
+    --gc-core:240,230,255;
+    --gc-mid:200,166,255;
+    --gc-edge:255,150,225;
+  }
+
+  /* ---------- 霓虹城市层（只存在于暗色主题）----------
+     地平线网格 + 两道霓虹光带 + 缓慢呼吸。
+     浅色主题下 .neon 是 display:none，连动画都不会跑 —— 浅色版一行没变。 */
+  .bg .neon{display:none}
+  [data-theme="dark"] .bg .neon{
+    display:block;position:absolute;inset:0;pointer-events:none;
+    animation:neon-breathe 11s var(--ease) infinite;
+  }
+  @keyframes neon-breathe{0%,100%{opacity:.66}50%{opacity:1}}
+  /* 网格用极细渐变线拼：竖线紫、横线品红，再压一个透视 + 上下渐隐 */
+  [data-theme="dark"] .bg .grid{
+    position:absolute;left:-30%;right:-30%;bottom:-6vh;height:52vh;
+    background-image:
+      linear-gradient(90deg,rgba(var(--neon-a1),.40) 0 1px,transparent 1px),
+      linear-gradient(rgba(var(--neon-a2),.30) 0 1px,transparent 1px);
+    background-size:70px 70px,70px 70px;
+    transform:perspective(300px) rotateX(64deg);
+    transform-origin:bottom center;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 46%,#000 82%,transparent 100%);
+    mask-image:linear-gradient(180deg,transparent 0,#000 46%,#000 82%,transparent 100%);
+  }
+  [data-theme="dark"] .bg .band{position:absolute;height:2px;border-radius:2px;filter:blur(16px)}
+  [data-theme="dark"] .bg .band.b1{
+    left:4%;right:24%;top:30%;opacity:.60;
+    background:linear-gradient(90deg,transparent,var(--neon-1),var(--neon-2),transparent);
+  }
+  [data-theme="dark"] .bg .band.b2{
+    left:30%;right:6%;top:52%;opacity:.44;
+    background:linear-gradient(90deg,transparent,var(--neon-2),var(--neon-1),transparent);
   }
 
   /* 深色下逐条修掉写死颜色的地方（浅色配方不能直接复用） */
+  /* 顶部那束"街灯"：暗色下带一点紫，和霓虹同族 */
   [data-theme="dark"] .bg::before{
-    background:radial-gradient(closest-side,rgba(150,190,255,.16),rgba(150,190,255,0) 74%);
+    background:radial-gradient(closest-side,rgba(190,170,255,.16),rgba(190,170,255,0) 74%);
   }
   [data-theme="dark"] .bg::after{
     background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0) 30%,rgba(255,255,255,.035));
@@ -131,34 +175,47 @@
   }
   /* 背景色块在深底上要换成"更深的同色系"：浅色版那几块高明度色块
      铺在黑底上只会浮出一层脏灰，得压深、提饱和，玻璃才有东西可折射 */
-  [data-theme="dark"] .orb{opacity:.44}
-  [data-theme="dark"] .orb.o1{background:#3d70e6}
-  [data-theme="dark"] .orb.o2{background:#1fb9a6;opacity:.46}
-  [data-theme="dark"] .orb.o3{background:#d9609f;opacity:.38}
-  [data-theme="dark"] .orb.o4{background:#6d63e8;opacity:.40}
-  [data-theme="dark"] .orb.o5{background:#4179f0;opacity:.34}
+  /* 背景色块＝霓虹灯池：压深、提饱和、加大模糊半径做泛光。
+     浅色那几块高明度色块铺黑底只会浮脏灰，这里换成真正的霓虹灯色。 */
+  [data-theme="dark"] .orb{filter:blur(96px);opacity:.52}
+  [data-theme="dark"] .orb.o1{background:#7b3cff;opacity:.56}
+  [data-theme="dark"] .orb.o2{background:#ff3fd0;opacity:.42}
+  [data-theme="dark"] .orb.o3{background:#a04bff;opacity:.46}
+  [data-theme="dark"] .orb.o4{background:#4a6bff;opacity:.34}
+  [data-theme="dark"] .orb.o5{background:#c44bff;opacity:.38}
   [data-theme="dark"] header.scrolled nav{
     background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.05) 55%,rgba(255,255,255,.10));
   }
   [data-theme="dark"] nav .progress{background:rgba(255,255,255,.10)}
+  /* 标题背后那团光 = 霓虹灯牌的泛光；标题本身再叠一层文字外发光（浅色下是蓝青） */
   [data-theme="dark"] .hero::before{
-    background:radial-gradient(closest-side,rgba(90,140,255,.24),rgba(0,184,169,.10) 55%,rgba(90,140,255,0) 78%);
+    background:radial-gradient(closest-side,rgba(var(--neon-a1),.34),rgba(var(--neon-a2),.16) 52%,rgba(var(--neon-a1),0) 78%);
   }
-  [data-theme="dark"] .hero h1{color:#b3a1ff}
-  /* 暗色主题的标题走"紫罗兰 → 品红"，和浅色那套蓝→青区分开（用户点名）；
-     只换标题/水印，全站强调色仍是蓝，不动。 */
+  [data-theme="dark"] .hero h1{
+    color:#c8b8ff;
+    text-shadow:0 0 26px rgba(var(--neon-a1),.50),0 0 64px rgba(var(--neon-a2),.28);
+  }
+  /* 暗色主题的标题走"紫罗兰 → 品红"，和浅色那套蓝→青区分开（用户点名） */
   [data-theme="dark"] .hero h1 .mark{
-    background:linear-gradient(120deg,#8574ff 0%,#a892ff 40%,#e07bd0 100%);
+    background:linear-gradient(120deg,#8574ff 0%,#a892ff 40%,#ff6bd6 100%);
     background-size:220% 100%;
   }
-  /* 主按钮在深底上反过来：亮底 + 深字，才是"最重"的那一颗 */
-  [data-theme="dark"] .btn.primary{background:#eef2fb;color:#12161f;box-shadow:0 10px 26px rgba(0,0,0,.45)}
-  [data-theme="dark"] .btn.primary:hover{box-shadow:0 18px 38px rgba(0,0,0,.55)}
+  /* 主按钮在深底上反过来：亮底 + 深字，才是"最重"的那一颗；再补一圈霓虹外发光 */
+  [data-theme="dark"] .btn.primary{
+    background:#f2f0ff;color:#141024;
+    box-shadow:0 10px 26px rgba(0,0,0,.45),0 0 34px rgba(var(--neon-a1),.30);
+  }
+  [data-theme="dark"] .btn.primary:hover{
+    box-shadow:0 18px 38px rgba(0,0,0,.55),0 0 48px rgba(var(--neon-a1),.40);
+  }
   [data-theme="dark"] .btn.ghost:hover{background:linear-gradient(150deg,rgba(255,255,255,.20),rgba(255,255,255,.07) 55%,rgba(255,255,255,.14))}
   [data-theme="dark"] .chip{background:linear-gradient(150deg,rgba(255,255,255,.10),rgba(255,255,255,.04))}
   [data-theme="dark"] .chip:hover{background:linear-gradient(150deg,rgba(255,255,255,.18),rgba(255,255,255,.08))}
   [data-theme="dark"] .fact,[data-theme="dark"] .skill-row + .skill-row{border-color:rgba(255,255,255,.08)}
-  [data-theme="dark"] .project .tag{background:rgba(91,140,255,.16)}
+  [data-theme="dark"] .project .tag{background:rgba(var(--neon-a1),.18)}
+  [data-theme="dark"] .bg-rip{
+    background:radial-gradient(closest-side,rgba(var(--neon-a1),.42),rgba(var(--neon-a2),.18) 50%,rgba(var(--neon-a1),0) 76%);
+  }
   /* tooltip 在深色下是深玻璃胶囊 + 亮字（浅色下仍是浅底，见 .dock .tip） */
   [data-theme="dark"] .dock .tip{
     background:rgba(30,36,50,.94);color:var(--ink);
@@ -179,9 +236,18 @@
   [data-theme="dark"] .btn.ghost{box-shadow:0 12px 34px rgba(0,0,0,.40),var(--glass-glow),var(--glass-inner)}
   [data-theme="dark"] .btn.ghost:hover{box-shadow:0 18px 42px rgba(0,0,0,.48),var(--glass-glow),var(--glass-inner)}
   [data-theme="dark"] .chip{box-shadow:0 2px 8px rgba(0,0,0,.32),inset 0 12px 18px -14px rgba(255,255,255,.14)}
-  [data-theme="dark"] .chip:hover{box-shadow:0 10px 22px rgba(0,0,0,.42)}
-  [data-theme="dark"] .project:hover{box-shadow:0 24px 60px rgba(0,0,0,.48),0 0 60px rgba(96,150,255,.16)}
-  [data-theme="dark"] .social:hover{box-shadow:0 18px 44px rgba(0,0,0,.48),0 0 54px rgba(96,150,255,.16),var(--glass-inner)}
+  [data-theme="dark"] .chip:hover{box-shadow:0 10px 22px rgba(0,0,0,.42),0 0 26px rgba(var(--neon-a1),.34)}
+  /* 悬停＝灯亮起来：玻璃面板、项目卡、社交按钮一起泛霓虹 */
+  [data-theme="dark"] .glass.tilt:hover{
+    box-shadow:0 22px 56px rgba(0,0,0,.50),0 0 62px rgba(var(--neon-a1),.24),
+               0 0 30px rgba(var(--neon-a2),.14),var(--glass-inner);
+  }
+  [data-theme="dark"] .project:hover{
+    box-shadow:0 24px 60px rgba(0,0,0,.50),0 0 74px rgba(var(--neon-a1),.30),0 0 34px rgba(var(--neon-a2),.18);
+  }
+  [data-theme="dark"] .social:hover{
+    box-shadow:0 18px 44px rgba(0,0,0,.50),0 0 62px rgba(var(--neon-a2),.28),var(--glass-inner);
+  }
   /* 主按钮在深色下是"亮底深字"，白色涟漪会看不见 → 换成深涟漪 */
   [data-theme="dark"] .btn.primary .ripple{background:radial-gradient(circle,rgba(21,24,31,.20),rgba(21,24,31,0) 70%)}
 
@@ -862,6 +928,12 @@
 <a class="skip" href="#main">跳到主内容</a>
 
 <div class="bg">
+  <!-- 霓虹城市层：只存在于暗色主题（浅色下 .neon 是 display:none，连动画都不跑） -->
+  <div class="neon" aria-hidden="true">
+    <span class="grid"></span>
+    <span class="band b1"></span>
+    <span class="band b2"></span>
+  </div>
   <span class="orb o1" data-parallax="0.06"></span>
   <span class="orb o2" data-parallax="-0.09"></span>
   <span class="orb o3" data-parallax="0.05"></span>
@@ -1273,7 +1345,7 @@
         gr.addColorStop(.34, '#a892ff');
         gr.addColorStop(.58, '#9b7bff');
         gr.addColorStop(.82, '#c58bf0');
-        gr.addColorStop(1,   '#e07bd0');
+        gr.addColorStop(1,   '#ff6bd6');
       }else{
         gr.addColorStop(0,   '#3f6ae0');
         gr.addColorStop(.34, '#7b8cf2');
